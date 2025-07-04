@@ -1,0 +1,29 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+typechain-types
+.vscode/
+crytic-export/
+echidna.yaml
+scope.md
+
+# Hardhat files
+cache
+artifacts
+
+
+# LayerZero specific files
+.layerzero
+
+# foundry test compilation files
+out
+cache
+
+# pnpm
+pnpm-error.log
+
+# Editor and OS files
+.DS_Store
+.idea

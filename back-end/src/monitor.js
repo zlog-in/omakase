@@ -11,6 +11,7 @@ const {
   RPC_URL,
   EVENT_NAME,
   ABI,
+  EXPLORER_URL,
 } = require("./config");
 
 // ============ Configuration Constants ============
@@ -51,6 +52,7 @@ async function retrieveAttestation(srcNetwork, transactionHash) {
   console.log("Retrieving attestation...");
   const domain = DOMAIN_ID[srcNetwork];
   const url = `https://iris-api-sandbox.circle.com/v2/messages/${domain}?transactionHash=${transactionHash}`;
+  console.log("iris url: ", url);
   while (true) {
     try {
       const response = await axios.get(url);
@@ -92,7 +94,7 @@ async function mintUSDC(dstNetwork, attestation) {
       args: [attestation.message, attestation.attestation],
     }),
   });
-  console.log(`Mint Tx: ${mintTx}`);
+  console.log(`Mint Tx: ${EXPLORER_URL[dstNetwork]}/tx/${mintTx}`);
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
@@ -114,6 +116,9 @@ async function monitorEvents(network) {
 
         console.log(
           `event txHash: ${event.log.transactionHash}, blockNumber: ${event.log.blockNumber}`
+        );
+        console.log(
+          `event Tx: ${EXPLORER_URL[network]}/tx/${event.log.transactionHash}`
         );
         console.log(`Chain ID: ${chainId}`);
         console.log(`Domain ID: ${domainId}`);

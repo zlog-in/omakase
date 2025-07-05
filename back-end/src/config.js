@@ -7,6 +7,12 @@ const RPC_URL = {
   arbitrumSepolia: "https://arbitrum-sepolia.gateway.tenderly.co",
 };
 
+const EXPLORER_URL = {
+  sepolia: "https://sepolia.etherscan.io",
+  baseSepolia: "https://sepolia.basescan.org",
+  arbitrumSepolia: "https://sepolia.arbiscan.io",
+};
+
 const USDC_ADDRESS = {
   sepolia: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
   baseSepolia: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
@@ -47,6 +53,7 @@ module.exports = {
   USDC_ADDRESS,
   DOMAIN_ID,
   DOMAIN_ID_MAP,
+  EXPLORER_URL,
   EVENT_NAME,
   ABI,
 };

@@ -123,4 +123,4 @@ async function main(srcNetwork, dstNetwork) {
   console.log("USDC transfer completed!");
 }
 
-main("sepolia", "baseSepolia").catch(console.error);
+main("baseSepolia", "sepolia").catch(console.error);

@@ -7,10 +7,10 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract StakeUpgradeable is BaseContractUpgradeable {
     struct StakeInfo {
-        uint256 amount;
-        uint256 reward;
-        uint256 lastStakedTime;
-        uint256 lastUnstakedTime;
+        uint256 stakeAmount;
+        uint256 stakeReward;
+        uint256 lastStakeTime;
+        uint256 lastUnstakeTime;
     }
 
     event Staked(uint256 indexed chainId, address indexed staker, uint256 amount);
@@ -25,19 +25,39 @@ abstract contract StakeUpgradeable is BaseContractUpgradeable {
     uint256 public totalStakedAmount;
     IERC20 public usdc;
 
-    uint256[50] private __gap;
+    uint256[47] private __gap;
 
+    // =============================== View Functions for Front-End ===============================
     function getUserReward(address _staker) public view returns (uint256) {
         return _getUserReward(_staker);
     }
 
+    function getUserStakeInfo(address _staker) public view returns (StakeInfo memory) {
+        return userStakeInfo[_staker];
+    }
+
+    function getTotalStakedAmount() public view returns (uint256) {
+        return totalStakedAmount;
+    }
+
+    /*
+    * @notice Get the remaining time to unstake
+    * @param _staker The address of the staker
+    * @return The remaining time to unstake
+    */
+    function getUserUnstakeLockTime(address _staker) public view returns (uint256) {
+        require(userStakeInfo[_staker].lastUnstakeTime > 0, "Stake: No Unstake request in processing");
+        uint256 unlockedTime = block.timestamp - userStakeInfo[_staker].lastUnstakeTime;
+        return unlockedTime < UNSTAKE_PERIOD ? UNSTAKE_PERIOD - unlockedTime : 0;
+    }
+
     function _stake(uint256 _chainId, address _staker, uint256 _amount) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
-        stakeInfo.reward += stakeInfo.amount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakedTime)
+        stakeInfo.stakeReward += stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
             / IOFT(oft).sharedDecimals();
-        stakeInfo.amount += _amount;
-        stakeInfo.lastStakedTime = block.timestamp;
-        stakeInfo.lastUnstakedTime = 0;
+        stakeInfo.stakeAmount += _amount;
+        stakeInfo.lastStakeTime = block.timestamp;
+        stakeInfo.lastUnstakeTime = 0;
         totalStakedAmount += _amount;
 
         emit Staked(_chainId, _staker, _amount);
@@ -45,23 +65,23 @@ abstract contract StakeUpgradeable is BaseContractUpgradeable {
 
     function _unstake(uint256 _chainId, address _staker) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
-        require(stakeInfo.lastUnstakedTime != 0, "Stake: already unstaked");
-        stakeInfo.lastUnstakedTime = block.timestamp;
+        require(stakeInfo.lastUnstakeTime != 0, "Stake: already unstaked");
+        stakeInfo.lastUnstakeTime = block.timestamp;
 
-        stakeInfo.reward += stakeInfo.amount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakedTime)
+        stakeInfo.stakeReward += stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
             / IOFT(oft).sharedDecimals();
-        stakeInfo.lastUnstakedTime = block.timestamp;
+        stakeInfo.lastUnstakeTime = block.timestamp;
 
-        emit Unstaked(_chainId, _staker, stakeInfo.amount);
+        emit Unstaked(_chainId, _staker, stakeInfo.stakeAmount);
     }
 
     function _withdraw(uint256 _chainId, address _staker) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
-        require(block.timestamp - stakeInfo.lastUnstakedTime >= UNSTAKE_PERIOD, "Chef: Unstake period not passed");
-        uint256 amount = stakeInfo.amount;
-        stakeInfo.amount = 0;
-        stakeInfo.lastStakedTime = 0;
-        stakeInfo.lastUnstakedTime = 0;
+        require(block.timestamp - stakeInfo.lastUnstakeTime >= UNSTAKE_PERIOD, "Chef: Unstake period not passed");
+        uint256 amount = stakeInfo.stakeAmount;
+        stakeInfo.stakeAmount = 0;
+        stakeInfo.lastStakeTime = 0;
+        stakeInfo.lastUnstakeTime = 0;
         totalStakedAmount -= amount;
 
         // TODO: Transfer oft back to staker
@@ -71,8 +91,9 @@ abstract contract StakeUpgradeable is BaseContractUpgradeable {
 
     function _claim(uint256 _chainId, address _staker) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
-        uint256 reward = stakeInfo.reward;
-        stakeInfo.reward = 0;
+
+        uint256 reward = _getUserReward(_staker);
+        stakeInfo.stakeReward = 0;
 
         // TODO: Transfer reward to staker
 

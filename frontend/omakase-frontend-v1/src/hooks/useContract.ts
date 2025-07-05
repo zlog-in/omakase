@@ -2,6 +2,7 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi'
 import { Address } from 'viem'
 import { WAITER_ABI, CHEF_ABI, OFT_ABI } from '@/lib/contracts'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
+import { ContractStakeInfo } from '@/types'
 import toast from 'react-hot-toast'
 
 // Define supported chain IDs type
@@ -9,7 +10,7 @@ type SupportedChainId = 11155111 | 421614 | 84532
 
 export function useWaiterContract(chainId: number) {
   const { address } = useAccount()
-  
+
   const getWaiterAddress = (chainId: number): Address | null => {
     switch (chainId) {
       case SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id:
@@ -22,7 +23,7 @@ export function useWaiterContract(chainId: number) {
   }
 
   const contractAddress = getWaiterAddress(chainId)
-  
+
   const { writeContract } = useWriteContract()
 
   const stake = async (amount: bigint) => {
@@ -31,10 +32,10 @@ export function useWaiterContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Initiating stake transaction...', { id: 'stake-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
@@ -42,7 +43,7 @@ export function useWaiterContract(chainId: number) {
         args: [amount],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Stake transaction submitted successfully!', { id: 'stake-tx' })
       return result
     } catch (error: any) {
@@ -58,10 +59,10 @@ export function useWaiterContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Initiating unstake transaction...', { id: 'unstake-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
@@ -69,7 +70,7 @@ export function useWaiterContract(chainId: number) {
         args: [],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Unstake transaction submitted successfully!', { id: 'unstake-tx' })
       return result
     } catch (error: any) {
@@ -85,10 +86,10 @@ export function useWaiterContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Initiating withdraw transaction...', { id: 'withdraw-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
@@ -96,7 +97,7 @@ export function useWaiterContract(chainId: number) {
         args: [],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Withdraw transaction submitted successfully!', { id: 'withdraw-tx' })
       return result
     } catch (error: any) {
@@ -112,10 +113,10 @@ export function useWaiterContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Initiating claim transaction...', { id: 'claim-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
@@ -123,7 +124,7 @@ export function useWaiterContract(chainId: number) {
         args: [],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Claim transaction submitted successfully!', { id: 'claim-tx' })
       return result
     } catch (error: any) {
@@ -139,10 +140,10 @@ export function useWaiterContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Processing reward reception...', { id: 'receive-reward-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
@@ -150,7 +151,7 @@ export function useWaiterContract(chainId: number) {
         args: [message, attestation],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Reward reception processed successfully!', { id: 'receive-reward-tx' })
       return result
     } catch (error: any) {
@@ -172,14 +173,14 @@ export function useWaiterContract(chainId: number) {
 
 export function useChefContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
-  
+
   return {
     address: contractAddress,
     abi: CHEF_ABI,
   }
 }
 
-// Chef contract read functions with error handling
+// Chef contract read functions - 修复类型问题
 export function useChefReadContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
 
@@ -189,77 +190,111 @@ export function useChefReadContract() {
       abi: CHEF_ABI,
       functionName: 'getTotalStakedAmount',
     })
-    
-    // Show error toast if read fails
+
     if (result.error) {
       toast.error('Failed to fetch total staked amount')
     }
-    
+
     return result
   }
 
-  const getStakedAmount = (staker: Address) => {
+  // 修复：明确处理tuple返回类型
+  const getUserStakeInfo = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
-      functionName: 'getStakedAmount',
+      functionName: 'getUserStakeInfo',
       args: [staker],
       query: {
         enabled: !!staker,
       }
     })
-    
-    // Show error toast if read fails
+
     if (result.error && staker) {
-      toast.error('Failed to fetch your staked amount')
+      toast.error('Failed to fetch your stake information')
     }
-    
-    return result
+
+    // 修复：明确类型转换和安全处理
+    const transformedResult = {
+      ...result,
+      data: result.data ? {
+        stakeAmount: (result.data as readonly [bigint, bigint, bigint, bigint])[0],
+        stakeReward: (result.data as readonly [bigint, bigint, bigint, bigint])[1],
+        lastStakeTime: (result.data as readonly [bigint, bigint, bigint, bigint])[2],
+        lastUnstakeTime: (result.data as readonly [bigint, bigint, bigint, bigint])[3],
+      } as ContractStakeInfo : undefined
+    }
+
+    return transformedResult
   }
 
-  const getUnstakePeriod = (staker: Address) => {
+  // 获取实时奖励
+  const getUserReward = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
-      functionName: 'getUnstakePeriod',
+      functionName: 'getUserReward',
       args: [staker],
       query: {
         enabled: !!staker,
       }
     })
-    
-    // Show error toast if read fails
-    if (result.error && staker) {
-      toast.error('Failed to fetch unstake period')
-    }
-    
-    return result
-  }
 
-  const getReward = (staker: Address) => {
-    const result = useReadContract({
-      address: contractAddress,
-      abi: CHEF_ABI,
-      functionName: 'getReward',
-      args: [staker],
-      query: {
-        enabled: !!staker,
-      }
-    })
-    
-    // Show error toast if read fails
     if (result.error && staker) {
       toast.error('Failed to fetch your rewards')
     }
-    
+
+    return result
+  }
+
+  // 获取unstake锁定剩余时间
+  const getUserUnstakeLockTime = (staker: Address) => {
+    const result = useReadContract({
+      address: contractAddress,
+      abi: CHEF_ABI,
+      functionName: 'getUserUnstakeLockTime',
+      args: [staker],
+      query: {
+        enabled: !!staker,
+      }
+    })
+
+    if (result.error && staker) {
+      // 这个函数在没有unstake时会revert，这是正常的
+      console.log('No unstake in progress (expected for active stakes)')
+    }
+
+    return result
+  }
+
+  // 获取合约常量
+  const getUnstakePeriod = () => {
+    const result = useReadContract({
+      address: contractAddress,
+      abi: CHEF_ABI,
+      functionName: 'UNSTAKE_PERIOD',
+    })
+
+    return result
+  }
+
+  const getStakeRewardRate = () => {
+    const result = useReadContract({
+      address: contractAddress,
+      abi: CHEF_ABI,
+      functionName: 'STAKE_REWARD_RATE',
+    })
+
     return result
   }
 
   return {
     getTotalStakedAmount,
-    getStakedAmount,
+    getUserStakeInfo,
+    getUserReward,
+    getUserUnstakeLockTime,
     getUnstakePeriod,
-    getReward,
+    getStakeRewardRate,
   }
 }
 
@@ -271,7 +306,7 @@ export function useChefWriteContract() {
   const sendReward = async (chainId: bigint, message: string, attestation: string) => {
     try {
       toast.loading('Initiating reward transfer...', { id: 'send-reward-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: CHEF_ABI,
@@ -279,7 +314,7 @@ export function useChefWriteContract() {
         args: [chainId, message, attestation],
         chainId: 84532 as SupportedChainId,
       })
-      
+
       toast.success('Reward transfer initiated successfully!', { id: 'send-reward-tx' })
       return result
     } catch (error: any) {
@@ -296,7 +331,7 @@ export function useChefWriteContract() {
 
 export function useOFTContract(chainId: number) {
   const { writeContract } = useWriteContract()
-  
+
   const getOFTAddress = (chainId: number): Address | null => {
     switch (chainId) {
       case SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id:
@@ -318,10 +353,10 @@ export function useOFTContract(chainId: number) {
       toast.error(error)
       throw new Error(error)
     }
-    
+
     try {
       toast.loading('Requesting token approval...', { id: 'approve-tx' })
-      
+
       const result = await writeContract({
         address: contractAddress,
         abi: OFT_ABI,
@@ -329,7 +364,7 @@ export function useOFTContract(chainId: number) {
         args: [spender, amount],
         chainId: chainId as SupportedChainId,
       })
-      
+
       toast.success('Token approval submitted successfully!', { id: 'approve-tx' })
       return result
     } catch (error: any) {
@@ -342,7 +377,7 @@ export function useOFTContract(chainId: number) {
   // Get token balance with error handling
   const getTokenBalance = (account: Address) => {
     const result = useReadContract({
-      address: contractAddress || undefined, // Fix: convert null to undefined
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
       abi: OFT_ABI,
       functionName: 'balanceOf',
       args: [account],
@@ -350,19 +385,83 @@ export function useOFTContract(chainId: number) {
         enabled: !!account && !!contractAddress,
       }
     })
-    
-    // Show error toast if read fails
+
     if (result.error && account && contractAddress) {
       toast.error('Failed to fetch token balance')
     }
-    
+
     return result
+  }
+
+  // 获取token allowance
+  const getTokenAllowance = (owner: Address, spender: Address) => {
+    const result = useReadContract({
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
+      abi: OFT_ABI,
+      functionName: 'allowance',
+      args: [owner, spender],
+      query: {
+        enabled: !!owner && !!spender && !!contractAddress,
+      }
+    })
+
+    return result
+  }
+
+  // 获取token信息 - 修复类型问题
+  const getTokenInfo = () => {
+    const name = useReadContract({
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
+      abi: OFT_ABI,
+      functionName: 'name',
+      query: {
+        enabled: !!contractAddress,
+      }
+    })
+
+    const symbol = useReadContract({
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
+      abi: OFT_ABI,
+      functionName: 'symbol',
+      query: {
+        enabled: !!contractAddress,
+      }
+    })
+
+    const decimals = useReadContract({
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
+      abi: OFT_ABI,
+      functionName: 'decimals',
+      query: {
+        enabled: !!contractAddress,
+      }
+    })
+
+    const sharedDecimals = useReadContract({
+      address: (contractAddress ?? undefined) as `0x${string}` | undefined,
+      abi: OFT_ABI,
+      functionName: 'sharedDecimals',
+      query: {
+        enabled: !!contractAddress,
+      }
+    })
+
+    return {
+      name: name.data as string | undefined,
+      symbol: symbol.data as string | undefined,
+      decimals: decimals.data as number | undefined,
+      sharedDecimals: sharedDecimals.data as number | undefined,
+      isLoading: name.isLoading || symbol.isLoading || decimals.isLoading || sharedDecimals.isLoading,
+      error: name.error || symbol.error || decimals.error || sharedDecimals.error
+    }
   }
 
   return {
     address: contractAddress,
     approve,
     getTokenBalance,
+    getTokenAllowance,
+    getTokenInfo,
   }
 }
 
@@ -378,7 +477,7 @@ export function useWaiterContractSafe(chainId: number) {
     toast.error(error)
     throw new Error(error)
   }
-  
+
   return useWaiterContract(chainId)
 }
 
@@ -392,12 +491,24 @@ export function showTransactionSuccess(txHash: string, chainId: number) {
       default: return 'https://etherscan.io'
     }
   }
-  
+
   const explorerUrl = `${getExplorerUrl(chainId)}/tx/${txHash}`
-  
-  // Fix: Use string message instead of JSX element
+
   toast.success(
     `Transaction confirmed! View on Explorer: ${explorerUrl}`,
     { duration: 5000 }
   )
+}
+
+// 合约事件监听Hook
+export function useStakingEvents(userAddress?: Address) {
+  // 这里可以添加事件监听逻辑
+  // 目前先返回空实现，后续可以扩展
+  return {
+    // TODO: 实现事件监听
+    stakingEvents: [],
+    isListening: false,
+    startListening: () => { },
+    stopListening: () => { },
+  }
 }

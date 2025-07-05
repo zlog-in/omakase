@@ -9,9 +9,7 @@ abstract contract Chef is StakeUpgradeable, IChef {
     address public backend;
 
     // =============================== View Functions ===============================
-    function getTotalStakedAmount() external view returns (uint256) {
-        // TODO: Implement
-    }
+
     function getStakedAmount(address _staker) external view returns (uint256) {
         // TODO: Implement
     }

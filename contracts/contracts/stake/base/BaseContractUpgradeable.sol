@@ -9,8 +9,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ILayerZeroComposer} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroComposer.sol";
 import {IBaseContract} from "../interfaces/IBaseContract.sol";
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
-import {PayloadTypes, LzOptions} from "../interfaces/IBaseContract.sol";
 import {OFTComposeMsgCodec} from "../../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
+import {LzMessageLib} from "../library/LzMessageLib.sol";
+import {LzOptions} from "../interfaces/IBaseContract.sol";
 
 /**
  * @dev The Base contract is used for Waiter and Chef contracts to inherit from,
@@ -23,15 +24,11 @@ abstract contract BaseContractUpgradeable is
     ILayerZeroComposer,
     IBaseContract
 {
-    using OptionsBuilder for bytes;
-    using OFTComposeMsgCodec for bytes;
-    using SafeERC20 for IERC20;
-
     mapping(address => bool) public localComposeMsgSender;
     mapping(uint32 => mapping(address => bool)) public remoteComposeMsgSender;
     mapping(uint256 => uint32) public chainId2Eid;
     mapping(uint32 => uint256) public eid2ChainId;
-    mapping(PayloadTypes => LzOptions) public lzOptions;
+    mapping(LzMessageLib.PayloadTypes => LzOptions) public lzOptions;
     address public oft;
     address public lzEndpoint;
 
@@ -82,7 +79,7 @@ abstract contract BaseContractUpgradeable is
     }
 
     function setPayloadOptions(uint8 _payloadType, uint128 _gas, uint128 _value) public onlyOwner {
-        lzOptions[PayloadTypes(_payloadType)] = LzOptions(_gas, _value);
+        lzOptions[LzMessageLib.PayloadTypes(_payloadType)] = LzOptions(_gas, _value);
     }
 
     /* =============================== Internal Functions =============================== */
@@ -103,15 +100,15 @@ abstract contract BaseContractUpgradeable is
     }
 
     function _getOptionsAirdrop(uint8 _payloadType) internal view returns (uint128 gas, uint128 value) {
-        gas = lzOptions[PayloadTypes(_payloadType)].gas;
-        value = lzOptions[PayloadTypes(_payloadType)].value;
+        gas = lzOptions[LzMessageLib.PayloadTypes(_payloadType)].gas;
+        value = lzOptions[LzMessageLib.PayloadTypes(_payloadType)].value;
     }
 
     function _getOption(uint8 _option) internal view returns (bytes memory options) {
-        (uint128 lzReceiveGas, uint128 lzReceiveValue) = _getOptionsAirdrop(uint8(PayloadTypes.LZ_RECEIVE));
+        (uint128 lzReceiveGas, uint128 lzReceiveValue) = _getOptionsAirdrop(uint8(LzMessageLib.PayloadTypes.LZ_RECEIVE));
         (uint128 optionGas, uint128 optionValue) = _getOptionsAirdrop(_option);
         uint16 index = 0; // only one message can be composed in a transaction
-        if (_option == uint8(PayloadTypes.STAKE_ORDER)) {
+        if (_option == uint8(LzMessageLib.PayloadTypes.STAKE)) {
             options = OptionsBuilder.newOptions().addExecutorLzReceiveOption(lzReceiveGas, lzReceiveValue)
                 .addExecutorLzComposeOption(index, optionGas, optionValue);
         }

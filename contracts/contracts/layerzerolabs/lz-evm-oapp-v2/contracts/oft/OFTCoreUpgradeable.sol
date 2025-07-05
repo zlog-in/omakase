@@ -416,12 +416,11 @@ abstract contract OFTCoreUpgradeable is
 
     /**
      * @dev Internal function to check if the receive is valid.
-     * @param _receiver The address to receive the tokens.
      * @param _amountLD The amount to receive in local decimals.
      * @return Whether the receive is valid.
      */
-    function _checkReceive(address _receiver, uint256 _amountLD) internal pure returns (bool) {
-        if (_receiver == address(0) || _amountLD == 0) {
+    function _checkReceive(uint256 _amountLD) internal pure returns (bool) {
+        if (_amountLD == 0) {
             return false;
         }
         return true;
@@ -431,8 +430,8 @@ abstract contract OFTCoreUpgradeable is
         internal
         returns (uint256 amountReceivedLD)
     {
-        // @dev Only mint/unlock token if its amount > 0 and receiver is not zero address
-        if (_checkReceive(_to, _amountLD)) {
+        // @dev Only mint/unlock token if its amount > 0
+        if (_checkReceive(_amountLD)) {
             amountReceivedLD = _credit(_to, _amountLD, _srcEid);
         }
     }

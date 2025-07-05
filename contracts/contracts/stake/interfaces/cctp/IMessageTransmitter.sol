@@ -2,5 +2,5 @@
 pragma solidity ^0.8.18;
 
 interface IMessageTransmitter {
-    function receiveMessage(bytes calldata message, bytes calldata attestation) external returns (bool success);
+    function receiveMessage(bytes calldata message, bytes calldata attestation) external;
 }

@@ -21,8 +21,27 @@ contract Chef is StakeUpgradeable, IChef {
     mapping(uint256 => address) public waiters;
     address public backend;
 
-    function sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation) external {
-        _sendReward(_chainId, _message, _attestation);
+    modifier onlyBackend() {
+        require(msg.sender == backend, "CCTPHandler: Only backend can call this function");
+        _;
+    }
+
+    // =============================== Backend Functions ===============================
+    function sendReward(uint32 _domainId, bytes calldata _message, bytes calldata _attestation) external onlyBackend {
+        _sendReward(_domainId, _message, _attestation);
+    }
+
+    function burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) public onlyBackend {
+        _burnUSDC(_chainId, _mintRecipient, _amount);
+    }
+
+    // =============================== Admin Functions ===============================
+    function setWaiter(uint256 _chainId, address _waiter) external onlyOwner {
+        waiters[_chainId] = _waiter;
+    }
+
+    function setBackend(address _backend) external onlyOwner {
+        backend = _backend;
     }
 
     // =============================== LayerZero Functions ===============================
@@ -79,7 +98,4 @@ contract Chef is StakeUpgradeable, IChef {
         MessagingFee memory fee = IOFT(oft).quoteSend(sendParam, false);
         IOFT(oft).send{value: fee.nativeFee}(sendParam, fee, address(this));
     }
-
-    receive() external payable {}
-    fallback() external payable {}
 }

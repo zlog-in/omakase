@@ -14,6 +14,7 @@ import {OFTMsgCodec} from "../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OF
 import {OFTComposeMsgCodec} from "../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 import {LzMessageLib} from "./library/LzMessageLib.sol";
 import {IWaiter} from "./interfaces/IWaiter.sol";
+import {CCTPHandlerUpgradeable} from "./base/CCTPHandlerUpgradeable.sol";
 
 contract Waiter is BaseContractUpgradeable, IWaiter {
     using SafeERC20 for IERC20;
@@ -35,10 +36,22 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(stakeMsg, _amount);
     }
 
+    function quoteStake(uint256 _amount) public view returns (uint256) {
+        bytes memory stakePayload = LzMessageLib.encodeStakePayload(msg.sender, _amount);
+        bytes memory stakeMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.STAKE), stakePayload);
+        return _quoteMsg(stakeMsg, _amount);
+    }
+
     function unstake() public payable {
         bytes memory unstakePayload = LzMessageLib.encodeUnstakePayload(msg.sender);
         bytes memory unstakeMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.UNSTAKE), unstakePayload);
         _sendMsg(unstakeMsg, 0);
+    }
+
+    function quoteUnstake() public view returns (uint256) {
+        bytes memory unstakePayload = LzMessageLib.encodeUnstakePayload(msg.sender);
+        bytes memory unstakeMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.UNSTAKE), unstakePayload);
+        return _quoteMsg(unstakeMsg, 0);
     }
 
     function withdraw() public payable {
@@ -48,10 +61,23 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(withdrawMsg, 0);
     }
 
+    function quoteWithdraw() public view returns (uint256) {
+        bytes memory withdrawPayload = LzMessageLib.encodeWithdrawPayload(msg.sender);
+        bytes memory withdrawMsg =
+            LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.WITHDRAW), withdrawPayload);
+        return _quoteMsg(withdrawMsg, 0);
+    }
+
     function claim() public payable {
         bytes memory claimPayload = LzMessageLib.encodeClaimPayload(msg.sender);
         bytes memory claimMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.CLAIM), claimPayload);
         _sendMsg(claimMsg, 0);
+    }
+
+    function quoteClaim() public view returns (uint256) {
+        bytes memory claimPayload = LzMessageLib.encodeClaimPayload(msg.sender);
+        bytes memory claimMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.CLAIM), claimPayload);
+        return _quoteMsg(claimMsg, 0);
     }
 
     // =============================== LayerZero Functions ===============================
@@ -104,6 +130,17 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         IOFT(oft).send{value: fee.nativeFee}(sendParam, fee, payable(msg.sender));
     }
 
-    receive() external payable {}
-    fallback() external payable {}
+    function _quoteMsg(bytes memory _msg, uint256 _amount) internal view returns (uint256) {
+        SendParam memory sendParam = SendParam({
+            dstEid: _getEid(hubChainId),
+            to: OFTMsgCodec.addressToBytes32(chef),
+            amountLD: _amount,
+            minAmountLD: _amount,
+            extraOptions: "",
+            composeMsg: _msg,
+            oftCmd: ""
+        });
+        MessagingFee memory fee = IOFT(oft).quoteSend(sendParam, false);
+        return fee.nativeFee;
+    }
 }

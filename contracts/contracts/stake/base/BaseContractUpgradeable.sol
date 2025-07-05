@@ -132,4 +132,7 @@ abstract contract BaseContractUpgradeable is
         }
         return true;
     }
+
+    receive() external payable {}
+    fallback() external payable {}
 }

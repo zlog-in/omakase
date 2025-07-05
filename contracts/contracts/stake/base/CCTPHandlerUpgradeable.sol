@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
     event BurnUSDC(uint256 indexed chainId, uint32 indexed domainId, address indexed mintRecipient, uint256 amount);
+    event MintUSDC(uint256 indexed chainId, uint32 indexed domainId, address indexed mintRecipient, uint256 amount);
 
     ITokenMessenger public tokenMessager;
     mapping(uint256 => uint32) public chainId2DomainId;
@@ -24,8 +25,12 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
         domainId2ChainId[_domainId] = _chainId;
     }
 
+    function setUSDC(address _usdc) external onlyOwner {
+        usdc = _usdc;
+    }
+
     // =============================== CCTP Functions ===============================
-    function _sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation)
+    function _sendReward(uint32 _domainId, bytes calldata _message, bytes calldata _attestation)
         internal
         whenNotPaused
     {
@@ -34,9 +39,16 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
 
     function _burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) internal whenNotPaused {
         IERC20(usdc).approve(address(tokenMessager), _amount);
-        require(chainId2DomainId[_chainId] > 0, "CCTPHandler: Invalid CCTP Domain");
+        uint32 finalitThreshold = 1000; // 1000: fast, 2000: standard
+        uint256 maxFee = 500; // maximum 500 bp
         ITokenMessenger(tokenMessager).depositForBurn(
-            _amount, chainId2DomainId[_chainId], _toBytes32(_mintRecipient), usdc
+            _amount,
+            chainId2DomainId[_chainId],
+            _toBytes32(_mintRecipient),
+            usdc,
+            _toBytes32(address(0)),
+            maxFee,
+            finalitThreshold
         );
         emit BurnUSDC(_chainId, chainId2DomainId[_chainId], _mintRecipient, _amount);
     }

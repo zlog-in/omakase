@@ -9,5 +9,5 @@ interface IChef {
     event RewardSent(uint256 indexed chainId, address indexed staker, uint256 amount);
 
     // =============================== CCTP Functions ===============================
-    function sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation) external;
+    function sendReward(uint32 _domainId, bytes calldata _message, bytes calldata _attestation) external;
 }

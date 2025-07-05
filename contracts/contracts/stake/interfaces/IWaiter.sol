@@ -15,6 +15,9 @@ interface IWaiter {
     function withdraw() external;
     function claim() external;
 
+    // =============================== CCPT Functions ===============================
+    function receiveReward(bytes calldata _message, bytes calldata _attestation) external;
+
     // =============================== Admin Functions ===============================
     function setToken(address _token) external;
     function setOFT(address _oft) external;

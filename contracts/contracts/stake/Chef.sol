@@ -14,26 +14,15 @@ import {OFTMsgCodec} from "../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OF
 import {OFTComposeMsgCodec} from "../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 import {LzMessageLib} from "./library/LzMessageLib.sol";
 
-abstract contract Chef is StakeUpgradeable, IChef {
+contract Chef is StakeUpgradeable, IChef {
     using OFTComposeMsgCodec for bytes;
     using LzMessageLib for bytes;
 
     mapping(uint256 => address) public waiters;
     address public backend;
 
-    // =============================== View Functions ===============================
-
-    function getStakedAmount(address _staker) external view returns (uint256) {
-        // TODO: Implement
-    }
-    function getUnstakePeriod(address _staker) external view returns (uint256) {
-        // TODO: Implement
-    }
-    function getReward(address _staker) external view returns (uint256) {}
-
-    // =============================== CCTP Functions ===============================
     function sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation) external {
-        // TODO: Implement
+        _sendReward(_chainId, _message, _attestation);
     }
 
     // =============================== LayerZero Functions ===============================
@@ -73,14 +62,6 @@ abstract contract Chef is StakeUpgradeable, IChef {
         }
     }
 
-    // =============================== Admin Functions ===============================
-    function setToken(address _token) external {
-        // TODO: Implement
-    }
-    function setOFT(address _oft) external {
-        // TODO: Implement
-    }
-
     // =============================== Internal Functions ===============================
     function _stake(address _staker, uint256 _amount) internal {}
 
@@ -96,8 +77,7 @@ abstract contract Chef is StakeUpgradeable, IChef {
         });
 
         MessagingFee memory fee = IOFT(oft).quoteSend(sendParam, false);
-        require(msg.value >= fee.nativeFee, "Waiter: insufficient lz fee");
-        IOFT(oft).send{value: fee.nativeFee}(sendParam, fee, payable(msg.sender));
+        IOFT(oft).send{value: fee.nativeFee}(sendParam, fee, address(this));
     }
 
     receive() external payable {}

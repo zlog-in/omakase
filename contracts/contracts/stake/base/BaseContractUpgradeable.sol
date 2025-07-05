@@ -12,11 +12,12 @@ import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/
 import {OFTComposeMsgCodec} from "../../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 import {LzMessageLib} from "../library/LzMessageLib.sol";
 import {LzOptions} from "../interfaces/IBaseContract.sol";
-
+import {IOAppCore} from "../../layerzerolabs/lz-evm-oapp-v2/contracts/oapp/interfaces/IOAppCore.sol";
 /**
  * @dev The Base contract is used for Waiter and Chef contracts to inherit from,
  * it contains the common functions and variables for the Waiter and Chef contracts.
  */
+
 abstract contract BaseContractUpgradeable is
     UUPSUpgradeable,
     OwnableUpgradeable,
@@ -24,13 +25,14 @@ abstract contract BaseContractUpgradeable is
     ILayerZeroComposer,
     IBaseContract
 {
+    using OptionsBuilder for bytes;
+
     mapping(address => bool) public localComposeMsgSender;
     mapping(uint32 => mapping(address => bool)) public remoteComposeMsgSender;
     mapping(uint256 => uint32) public chainId2Eid;
     mapping(uint32 => uint256) public eid2ChainId;
     mapping(LzMessageLib.PayloadTypes => LzOptions) public lzOptions;
     address public oft;
-    address public lzEndpoint;
 
     uint256[43] private __gap;
 
@@ -54,7 +56,6 @@ abstract contract BaseContractUpgradeable is
         _unpause();
     }
 
-    using OptionsBuilder for bytes;
     /* =============================== Amdin Functions =============================== */
 
     function setLocalComposeMsgSender(address _addr, bool _allowed) public onlyOwner {
@@ -63,10 +64,6 @@ abstract contract BaseContractUpgradeable is
 
     function setRemoteComposeMsgSender(uint32 _eid, address _addr, bool _allowed) public onlyOwner {
         remoteComposeMsgSender[_eid][_addr] = _allowed;
-    }
-
-    function setLzEndpoint(address _lzEndpoint) public onlyOwner {
-        lzEndpoint = _lzEndpoint;
     }
 
     function setOft(address _oft) public onlyOwner {
@@ -127,6 +124,7 @@ abstract contract BaseContractUpgradeable is
         uint32 _srcEid,
         address _remoteSender
     ) internal view returns (bool) {
+        address lzEndpoint = address(IOAppCore(oft).endpoint());
         if (lzEndpoint != _lzEndpoint) revert InvalidEnpoint(lzEndpoint, _lzEndpoint);
         if (!_isLocalComposeMsgSender(_localSender)) revert NotLocalComposeMsgSender(_localSender);
         if (!_isRemoteComposeMsgSender(_srcEid, _remoteSender)) {

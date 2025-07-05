@@ -23,7 +23,6 @@ interface IBaseContract is ILayerZeroComposer {
     /* ========== Functions ========== */
     function setLocalComposeMsgSender(address _composeMsgSender, bool _allowed) external;
     function setRemoteComposeMsgSender(uint32 _eid, address _composeMsgSender, bool _allowed) external;
-    function setLzEndpoint(address _lzEndpoint) external;
     function setPayloadOptions(uint8 _payloadType, uint128 _gas, uint128 _value) external;
     function setOft(address _oft) external;
     function setEid(uint256 _chainId, uint32 _eid) external;

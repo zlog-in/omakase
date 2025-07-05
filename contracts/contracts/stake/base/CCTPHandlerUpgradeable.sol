@@ -10,9 +10,10 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
 
     ITokenMessenger public tokenMessager;
     mapping(uint256 => uint32) public chainId2DomainId;
+    mapping(uint32 => uint256) public domainId2ChainId;
     address public usdc;
 
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 
     function settokenMessager(address _tokenMessager) external onlyOwner {
         tokenMessager = ITokenMessenger(_tokenMessager);
@@ -20,6 +21,12 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
 
     function setCCTPDomainId(uint256 _chainId, uint32 _domainId) external onlyOwner {
         chainId2DomainId[_chainId] = _domainId;
+        domainId2ChainId[_domainId] = _chainId;
+    }
+
+    // =============================== CCTP Functions ===============================
+    function _sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation) internal {
+        // TODO: Implement
     }
 
     function _burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) internal {

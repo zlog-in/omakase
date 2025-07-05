@@ -2,21 +2,9 @@
 
 // RPC Configuration
 const RPC_URL = {
-  mainnet: "https://mainnet.gateway.tenderly.co",
-  base: "https://base.gateway.tenderly.co",
-  arbitrum: "https://arbitrum.gateway.tenderly.co",
   sepolia: "https://sepolia.gateway.tenderly.co",
   baseSepolia: "https://base-sepolia.gateway.tenderly.co",
   arbitrumSepolia: "https://arbitrum-sepolia.gateway.tenderly.co",
-};
-// Contract Configuration
-const CONTRACT_ADDRESS = {
-  mainnet: "0xbd3fa81b58ba92a82136038b25adec7066af3155",
-  base: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
-  arbitrum: "0x19330d10D9Cc8751218eaf51E8885D058642E08A",
-  sepolia: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
-  baseSepolia: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
-  arbitrumSepolia: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
 };
 
 const USDC_ADDRESS = {
@@ -29,6 +17,12 @@ const DOMAIN_ID = {
   sepolia: 0,
   baseSepolia: 6,
   arbitrumSepolia: 3,
+};
+
+const DOMAIN_ID_MAP = {
+  0: "sepolia",
+  6: "baseSepolia",
+  3: "arbitrumSepolia",
 };
 
 const EVENT_NAME = "DepositForBurn";
@@ -44,7 +38,6 @@ const ABI = [
   {
     anonymous: false,
     inputs: [
-      { indexed: true, name: "nonce", type: "uint64" },
       { indexed: true, name: "burnToken", type: "address" },
       { indexed: false, name: "amount", type: "uint256" },
       { indexed: true, name: "depositor", type: "address" },
@@ -52,6 +45,9 @@ const ABI = [
       { indexed: false, name: "destinationDomain", type: "uint32" },
       { indexed: false, name: "destinationTokenMessenger", type: "bytes32" },
       { indexed: false, name: "destinationCaller", type: "bytes32" },
+      { indexed: false, name: "maxFee", type: "uint256" },
+      { indexed: true, name: "minFinalityThreshold", type: "uint32" },
+      { indexed: false, name: "hookData", type: "bytes" },
     ],
     name: "DepositForBurn",
     type: "event",
@@ -60,9 +56,9 @@ const ABI = [
 
 module.exports = {
   RPC_URL,
-  CONTRACT_ADDRESS,
   USDC_ADDRESS,
   DOMAIN_ID,
+  DOMAIN_ID_MAP,
   EVENT_NAME,
   ABI,
 };

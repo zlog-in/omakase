@@ -3,7 +3,6 @@ require("dotenv").config();
 const { createWalletClient, http, encodeFunctionData } = require("viem");
 const { privateKeyToAccount } = require("viem/accounts");
 const { sepolia, baseSepolia, arbitrumSepolia } = require("viem/chains");
-const axios = require("axios");
 const { USDC_ADDRESS, DOMAIN_ID } = require("./config");
 
 // ============ Configuration Constants ============
@@ -118,61 +117,10 @@ async function burnUSDC(srcNetwork, dstNetwork) {
   return burnTx;
 }
 
-async function retrieveAttestation(srcNetwork, transactionHash) {
-  console.log("Retrieving attestation...");
-  const domain = DOMAIN_ID[srcNetwork];
-  const url = `https://iris-api-sandbox.circle.com/v2/messages/${domain}?transactionHash=${transactionHash}`;
-  while (true) {
-    try {
-      const response = await axios.get(url);
-      if (response.status === 404) {
-        console.log("Waiting for attestation...");
-      }
-      if (response.data?.messages?.[0]?.status === "complete") {
-        console.log("Attestation retrieved successfully!");
-        return response.data.messages[0];
-      }
-      console.log("Waiting for attestation...");
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    } catch (error) {
-      console.error("Error fetching attestation:", error.message);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
-  }
-}
-
-async function mintUSDC(dstNetwork, attestation) {
-  console.log(`Minting USDC on ${dstNetwork}...`);
-  const dstClient = CLIENTS[dstNetwork];
-  const mintTx = await dstClient.sendTransaction({
-    to: SEPOLIA_MESSAGE_TRANSMITTER,
-    data: encodeFunctionData({
-      abi: [
-        {
-          type: "function",
-          name: "receiveMessage",
-          stateMutability: "nonpayable",
-          inputs: [
-            { name: "message", type: "bytes" },
-            { name: "attestation", type: "bytes" },
-          ],
-          outputs: [],
-        },
-      ],
-      functionName: "receiveMessage",
-      args: [attestation.message, attestation.attestation],
-    }),
-  });
-  console.log(`Mint Tx: ${mintTx}`);
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-}
-
 async function main(srcNetwork, dstNetwork) {
   await approveUSDC(srcNetwork);
   const burnTx = await burnUSDC(srcNetwork, dstNetwork);
-  const attestation = await retrieveAttestation(srcNetwork, burnTx);
-  await mintUSDC(dstNetwork, attestation);
   console.log("USDC transfer completed!");
 }
 
-main("arbitrumSepolia", "baseSepolia").catch(console.error);
+main("sepolia", "baseSepolia").catch(console.error);

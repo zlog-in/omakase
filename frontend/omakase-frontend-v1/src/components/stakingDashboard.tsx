@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { useStaking, useUnstakeCountdown, useRealtimeRewards } from '@/hooks/useStaking'
 import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -54,7 +55,9 @@ export function StakingDashboard() {
     } = useStaking()
 
     // 获取当前链的代币信息
-    const tokenInfo = chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
+    const tokenInfo = useMemo(() => {
+        return chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
+    }, [chainId])
 
     if (!address) {
         return (

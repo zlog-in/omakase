@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount, useChainId } from 'wagmi'
 import { StakeForm } from '@/components/stakeForm'
@@ -10,7 +10,7 @@ import { LayerZeroScanIconButton } from '@/components/LayerZeroScanButton'
 import { useStaking } from '@/hooks/useStaking'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Zap, Shield, Clock, DollarSign } from 'lucide-react'
+import { Zap, Shield, Clock, DollarSign, RotateCcw } from 'lucide-react'
 import { StakingStatus } from '@/types'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
 
@@ -57,7 +57,9 @@ function StakingStats() {
   }, [])
 
   // 获取当前链的代币信息
-  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
+  const tokenInfo = useMemo(() => {
+    return chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
+  }, [chainId])
 
   if (!isMounted) {
     return (
@@ -136,7 +138,9 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
   const [isMounted, setIsMounted] = useState(false)
   const { cancelUnstake, isLoading } = useStaking()
   const chainId = useChainId()
-  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
+  const tokenInfo = useMemo(() => {
+    return chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
+  }, [chainId])
 
   useEffect(() => {
     setIsMounted(true)
@@ -156,31 +160,72 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
   }
 
   return (
-    <Card className="border-yellow-200 bg-yellow-50">
+    <Card className="border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
       <CardContent className="p-6">
         <div className="flex items-start gap-3">
-          <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+              <Clock className="w-5 h-5 text-yellow-600" />
+            </div>
+          </div>
           <div className="flex-1">
-            <h4 className="font-medium text-yellow-800 mb-2">Unstake In Progress</h4>
-            <p className="text-sm text-yellow-700 mb-3">
-              {stakingStatus.canWithdraw
-                ? "✅ Lock period ended - You can now withdraw your tokens"
-                : `🕐 Lock period active - ${stakingStatus.unstakeLockRemaining}s remaining`
-              }
-            </p>
+            <div className="flex items-center gap-2 mb-2">
+              <h4 className="font-medium text-yellow-800">⏳ Withdrawal Waiting Period</h4>
+              {!stakingStatus.canWithdraw && (
+                <Badge variant="outline" className="text-xs border-yellow-300 text-yellow-700">
+                  {stakingStatus.unstakeLockRemaining}s remaining
+                </Badge>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              {stakingStatus.canWithdraw ? (
+                <div className="p-3 bg-green-100 border border-green-200 rounded-lg">
+                  <p className="text-sm text-green-800">
+                    ✅ <strong>Ready to withdraw!</strong> Your tokens are now available for withdrawal.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-yellow-700">
+                    🕐 Your unstake request is processing. You can withdraw in {stakingStatus.unstakeLockRemaining} seconds.
+                  </p>
+                  <div className="w-full bg-yellow-200 rounded-full h-2">
+                    <div 
+                      className="bg-yellow-600 h-2 rounded-full transition-all duration-1000"
+                      style={{ 
+                        width: `${Math.max(0, 100 - (stakingStatus.unstakeLockRemaining / 15) * 100)}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {stakingStatus.isUnstakeCancellable && (
-              <div className="mt-3 p-3 bg-white rounded border">
-                <p className="text-sm text-gray-700 mb-2">
-                  💡 <strong>Tip:</strong> You can cancel this unstake by staking additional {tokenInfo.symbol} tokens.
-                </p>
-                <button
-                  onClick={handleCancelUnstake}
-                  disabled={isLoading}
-                  className="px-3 py-1 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
-                >
-                  Cancel Unstake
-                </button>
+              <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                <div className="flex items-start gap-3">
+                  <RotateCcw className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 font-medium mb-2">🔄 Restart Staking Cycle</p>
+                    <p className="text-xs text-blue-700 mb-3">
+                      You can seamlessly restart your staking journey! Staking now will:
+                    </p>
+                    <ul className="text-xs text-blue-700 space-y-1 mb-3 pl-3">
+                      <li>• Cancel this withdrawal request</li>
+                      <li>• Resume earning rewards immediately</li>
+                      <li>• Add to your existing position</li>
+                    </ul>
+                    <button
+                      onClick={handleCancelUnstake}
+                      disabled={isLoading}
+                      className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Restart Staking
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -202,7 +247,9 @@ export default function Home() {
   }, [])
 
   const stakingStatus = address ? getStakingStatus() : null
-  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN', chainName: 'Unknown Network' }
+  const tokenInfo = useMemo(() => {
+    return chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN', chainName: 'Unknown Network' }
+  }, [chainId])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">

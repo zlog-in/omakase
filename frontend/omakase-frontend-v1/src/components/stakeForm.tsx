@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useStaking } from '@/hooks/useStaking'
 import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -8,7 +8,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Badge } from './ui/badge'
-import { AlertTriangle, Info, Calculator, Zap, TrendingUp, Wallet } from 'lucide-react'
+import { AlertTriangle, Info, Calculator, Zap, TrendingUp, Wallet, RotateCcw } from 'lucide-react'
 import { isValidAmount } from '@/lib/utils'
 import { StakingStatus } from '@/types'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
@@ -62,20 +62,22 @@ export function StakeForm() {
   const rewardCalculation = getRewardCalculation()
 
   // 获取当前链的代币信息
-  const tokenInfo = chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
+  const tokenInfo = useMemo(() => {
+    return chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
+  }, [chainId])
 
   // 加载余额
-  const loadBalance = async () => {
+  const loadBalance = useCallback(async () => {
     const bal = getTokenBalance()
     setBalance(bal)
-  }
+  }, [getTokenBalance])
 
   // 初始加载余额
   useEffect(() => {
     if (address) {
       loadBalance()
     }
-  }, [address])
+  }, [address, loadBalance])
 
   // 验证输入
   useEffect(() => {
@@ -104,7 +106,7 @@ export function StakeForm() {
 
     setErrors(newErrors)
     setWarnings(newWarnings)
-  }, [amount, balance, stakingStatus, tokenInfo.symbol])
+  }, [amount, balance, stakingStatus.status, stakingStatus.isUnstakeCancellable, tokenInfo.symbol])
 
   // 计算预估奖励
   const calculateProjectedRewards = (stakeAmount: string) => {
@@ -127,13 +129,17 @@ export function StakeForm() {
       return
     }
 
-    // 特殊确认：如果会取消unstake
+    // 特殊确认：如果会取消unstake - 质押循环确认
     if (stakingStatus.status === StakingStatus.UNSTAKED && stakingStatus.isUnstakeCancellable) {
       const confirmed = window.confirm(
-        '⚠️ Warning: Staking now will cancel your pending unstake request.\n\n' +
-        'Your tokens will remain staked and continue earning rewards.\n' +
-        'You can unstake again later if needed.\n\n' +
-        'Do you want to continue?'
+        '🔄 RESTART STAKING CYCLE\n\n' +
+        '✅ This will cancel your pending unstake request\n' +
+        '🔄 Your staking position will be reset\n' +
+        '💰 You will resume earning rewards immediately\n' +
+        '⏰ New tokens will be added to your position\n\n' +
+        '💡 This is the intended behavior - you can seamlessly restart\n' +
+        'your staking cycle during the withdrawal waiting period.\n\n' +
+        'Continue with staking?'
       )
       if (!confirmed) return
     }
@@ -198,16 +204,29 @@ export function StakeForm() {
             </p>
           </div>
 
-          {/* Unstake警告 */}
+          {/* Unstake取消警告 - 质押循环提示 */}
           {warnings.unstakeCancel && (
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
-                <div>
-                  <p className="text-sm text-yellow-800 font-medium">Cancel Unstake</p>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    {warnings.unstakeCancel}. This will reset your staking period and continue earning rewards.
+            <div className="p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                    <RotateCcw className="w-4 h-4 text-yellow-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800 font-medium mb-2">🔄 Restart Staking Cycle</p>
+                  <p className="text-xs text-yellow-700 mb-3">
+                    You have a pending unstake request in progress. Staking now will:
                   </p>
+                  <ul className="text-xs text-yellow-700 space-y-1 mb-3 pl-3">
+                    <li>• ✅ Cancel your current unstake countdown</li>
+                    <li>• 🔄 Reset your staking position</li>
+                    <li>• 💰 Resume earning rewards immediately</li>
+                    <li>• ⏰ Add new tokens to your existing position</li>
+                  </ul>
+                  <div className="text-xs text-yellow-600 bg-yellow-100 p-2 rounded border-l-2 border-yellow-400">
+                    <strong>Smart Contract Behavior:</strong> This is the intended staking cycle design - you can seamlessly restart staking during the withdrawal waiting period.
+                  </div>
                 </div>
               </div>
             </div>
@@ -332,7 +351,10 @@ export function StakeForm() {
                 Staking...
               </div>
             ) : warnings.unstakeCancel ? (
-              'Stake & Cancel Unstake'
+              <div className="flex items-center gap-2">
+                <RotateCcw className="w-4 h-4" />
+                Restart Staking Cycle
+              </div>
             ) : (
               `Stake ${tokenInfo.symbol}`
             )}
@@ -350,14 +372,19 @@ export function StakeForm() {
             <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-lg border">
               <Info className="w-4 h-4 text-gray-500 mt-0.5" />
               <div className="text-gray-600">
-                <p className="font-medium text-sm">How it works:</p>
+                <p className="font-medium text-sm">Staking Cycle:</p>
                 <ul className="mt-1 space-y-1 text-xs">
-                  <li>• Rewards are calculated continuously (every second)</li>
-                  <li>• No lock period for staking - unstake anytime</li>
-                  <li>• 15-second withdrawal lock after unstaking</li>
-                  <li>• Claim rewards independently of staking</li>
-                  <li>• Cross-chain support via LayerZero</li>
+                  <li>• 💰 <strong>Stake:</strong> Start earning rewards immediately</li>
+                  <li>• ⏸️ <strong>Unstake:</strong> Stop rewards, begin 15s withdrawal period</li>
+                  <li>• 🔄 <strong>Restake:</strong> Cancel withdrawal, resume rewards anytime</li>
+                  <li>• 💸 <strong>Withdraw:</strong> Collect tokens after waiting period</li>
+                  <li>• 🎁 <strong>Claim:</strong> Collect USDC rewards on any chain</li>
                 </ul>
+                <div className="mt-2 p-2 bg-blue-50 rounded border-l-2 border-blue-300">
+                  <p className="text-xs text-blue-700">
+                    <strong>💡 Smart Design:</strong> You can seamlessly restart staking during withdrawal periods - this flexibility is the core feature of our protocol!
+                  </p>
+                </div>
               </div>
             </div>
 

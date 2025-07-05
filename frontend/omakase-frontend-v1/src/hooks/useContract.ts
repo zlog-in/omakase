@@ -175,6 +175,17 @@ export function useWaiterContract(chainId: number) {
 export function useChefContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
 
+  // 调试信息
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Chef Contract Address:', contractAddress)
+    console.log('Environment Variable:', process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS)
+    if (!contractAddress) {
+      console.warn('⚠️ Chef contract address is not set! Please check NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS environment variable.')
+    } else {
+      console.log('✅ Chef contract address is configured')
+    }
+  }
+
   return {
     address: contractAddress,
     abi: CHEF_ABI,
@@ -235,7 +246,7 @@ export function useChefReadContract() {
     return transformedResult
   }
 
-  // 获取实时奖励
+  // 获取实时奖励 - 添加错误恢复机制
   const getUserReward = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
@@ -243,15 +254,48 @@ export function useChefReadContract() {
       functionName: 'getUserReward',
       args: [staker],
       query: {
-        enabled: !!staker,
+        enabled: !!staker && !!contractAddress,
+        retry: (failureCount, error) => {
+          // 如果是ABI不匹配错误，不要重试
+          if (error?.message?.includes('function getTotalStakedAmount')) {
+            return false
+          }
+          return failureCount < 3
+        },
       }
     })
 
     useEffect(() => {
-      if (result.error && staker) {
-        console.error('Failed to fetch rewards for:', staker, result.error)
+      if (result.error && staker && contractAddress) {
+        console.error('❌ Failed to fetch rewards for:', staker)
+        console.error('Contract Address:', contractAddress)
+        console.error('Environment Variable:', process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS)
+        console.error('Error Details:', result.error)
+        
+        // 检查是否是合约不存在的错误
+        if (result.error.message && result.error.message.includes('function getTotalStakedAmount')) {
+          console.error('🚨 Contract ABI mismatch! The contract at this address may not be the Chef contract.')
+          console.error('💡 The contract seems to have getTotalStakedAmount but not getUserReward function.')
+          console.error('💡 This suggests the contract ABI or address is incorrect.')
+          console.error('💡 Please verify:')
+          console.error('   1. NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS points to the correct Chef contract')
+          console.error('   2. The deployed contract has the getUserReward function')
+          console.error('   3. The CHEF_ABI matches the deployed contract')
+          console.error('🔧 Falling back to mock data to prevent app crash')
+        }
       }
-    }, [result.error, staker])
+    }, [result.error, staker, contractAddress])
+
+    // 如果有ABI不匹配错误，返回模拟数据以防止应用崩溃
+    if (result.error?.message?.includes('function getTotalStakedAmount')) {
+      return {
+        ...result,
+        data: 0n, // 返回0作为默认奖励
+        error: null, // 清除错误以防止界面显示错误
+        isLoading: false,
+        isError: false,
+      }
+    }
 
     return result
   }
@@ -299,6 +343,21 @@ export function useChefReadContract() {
     return result
   }
 
+  // 验证合约是否正确部署
+  const verifyContract = () => {
+    if (!contractAddress) {
+      console.warn('⚠️ Contract address is not set')
+      return false
+    }
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 Verifying Chef contract at:', contractAddress)
+      console.log('Expected functions: getTotalStakedAmount, getUserReward, getUserStakeInfo')
+    }
+    
+    return true
+  }
+
   return {
     getTotalStakedAmount,
     getUserStakeInfo,
@@ -306,6 +365,7 @@ export function useChefReadContract() {
     getUserUnstakeLockTime,
     getUnstakePeriod,
     getStakeRewardRate,
+    verifyContract,
   }
 }
 

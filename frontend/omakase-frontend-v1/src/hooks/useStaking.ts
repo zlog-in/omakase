@@ -31,6 +31,7 @@ export function useStaking(): UseStakingReturn {
   const { address } = useAccount()
   const chainId = useChainId()
   const [isLoading, setIsLoading] = useState(false)
+  const [hasActivePositionPrev, setHasActivePositionPrev] = useState(false)
 
   // 类型安全的链ID检查
   const safeChainId = useMemo(() => {
@@ -132,7 +133,13 @@ export function useStaking(): UseStakingReturn {
 
       if (willCancelUnstake) {
         const confirmed = window.confirm(
-          'You have a pending unstake request. Staking now will cancel your unstake and reset the lock period. Do you want to continue?'
+          '🔄 RESTART STAKING CYCLE\n\n' +
+          'You have a pending unstake request. Staking now will:\n' +
+          '✅ Cancel your withdrawal countdown\n' +
+          '🔄 Reset your staking position\n' +
+          '💰 Resume earning rewards immediately\n\n' +
+          'This is the intended staking cycle behavior.\n' +
+          'Continue with staking?'
         )
         if (!confirmed) {
           setIsLoading(false)
@@ -155,17 +162,19 @@ export function useStaking(): UseStakingReturn {
       await waiterContract.stake(amountWei)
 
       if (willCancelUnstake) {
-        customToast.staking.stakeSuccess('Stake successful! Your previous unstake request has been cancelled.')
+        customToast.staking.stakeSuccess('🔄 Staking cycle restarted! Your unstake request has been cancelled and you\'re earning rewards again.')
       } else {
         customToast.staking.stakeSuccess()
       }
 
       // 刷新数据
+      console.log('🔄 Refreshing staking data after stake operation...')
       await Promise.all([
         refetchStakeInfo(),
         refetchRewards(),
         refetchUnstakeLockTime()
       ])
+      console.log('✅ Staking data refreshed successfully')
 
     } catch (error: any) {
       console.error('Stake failed:', error)
@@ -205,10 +214,12 @@ export function useStaking(): UseStakingReturn {
       customToast.staking.unstakeSuccess(STAKING_CONSTANTS.UNSTAKE_PERIOD)
 
       // 刷新数据
+      console.log('🔄 Refreshing staking data after unstake operation...')
       await Promise.all([
         refetchStakeInfo(),
         refetchUnstakeLockTime()
       ])
+      console.log('✅ Unstake data refreshed successfully')
 
     } catch (error: any) {
       console.error('Unstake failed:', error)
@@ -238,10 +249,12 @@ export function useStaking(): UseStakingReturn {
       customToast.staking.withdrawSuccess()
 
       // 刷新数据
+      console.log('🔄 Refreshing staking data after withdraw operation...')
       await Promise.all([
         refetchStakeInfo(),
         refetchUnstakeLockTime()
       ])
+      console.log('✅ Withdraw data refreshed successfully')
 
     } catch (error: any) {
       console.error('Withdraw failed:', error)
@@ -272,7 +285,9 @@ export function useStaking(): UseStakingReturn {
       customToast.staking.claimSuccess(rewardAmount)
 
       // 刷新奖励数据
+      console.log('🔄 Refreshing reward data after claim operation...')
       await refetchRewards()
+      console.log('✅ Reward data refreshed successfully')
 
     } catch (error: any) {
       console.error('Claim reward failed:', error)
@@ -292,7 +307,13 @@ export function useStaking(): UseStakingReturn {
     }
 
     const confirmed = window.confirm(
-      'This will stake additional tokens to cancel your unstake request. You can unstake again later if needed. Continue?'
+      '🔄 RESTART STAKING CYCLE\n\n' +
+      'This will stake additional tokens to:\n' +
+      '✅ Cancel your current unstake request\n' +
+      '🔄 Reset your staking position\n' +
+      '💰 Resume earning rewards immediately\n\n' +
+      'You can unstake again anytime if needed.\n' +
+      'Continue with restarting your staking cycle?'
     )
 
     if (!confirmed) return
@@ -484,16 +505,74 @@ export function useStaking(): UseStakingReturn {
     })
   }, [refetchStakeInfo, refetchRewards, refetchUnstakeLockTime])
 
-  // 自动刷新数据 - 类型安全版本
+  // 初始连接时检查仓位状态
   useEffect(() => {
-    if (!address) return
+    if (address && safeUserStakeInfo) {
+      const hasActivePosition = safeUserStakeInfo.stakeAmount > 0n || 
+                               safeUserStakeInfo.lastUnstakeTime > 0n ||
+                               safeUserRewards > 0n
+      
+      console.log(`👛 Wallet connected: ${address}`)
+      console.log(`📊 Staking Position Summary:`)
+      console.log(`   • Staked Amount: ${safeUserStakeInfo.stakeAmount}`)
+      console.log(`   • Last Unstake Time: ${safeUserStakeInfo.lastUnstakeTime}`)
+      console.log(`   • Current Rewards: ${safeUserRewards}`)
+      console.log(`   • Has Active Position: ${hasActivePosition}`)
+    }
+  }, [
+    address, 
+    safeUserStakeInfo?.stakeAmount, 
+    safeUserStakeInfo?.lastUnstakeTime, 
+    safeUserRewards
+  ])
 
+  // 自动刷新数据 - 只在有质押仓位时刷新
+  useEffect(() => {
+    if (!address || !safeUserStakeInfo) {
+      setHasActivePositionPrev(false)
+      return
+    }
+    
+    // 检查用户是否有活跃的质押仓位
+    const hasActivePosition = safeUserStakeInfo.stakeAmount > 0n || 
+                             safeUserStakeInfo.lastUnstakeTime > 0n ||
+                             safeUserRewards > 0n
+
+    // 更新仓位状态跟踪
+    const positionStatusChanged = hasActivePosition !== hasActivePositionPrev
+    setHasActivePositionPrev(hasActivePosition)
+
+    // 只有在有活跃仓位时才启动定时刷新
+    if (!hasActivePosition) {
+      if (positionStatusChanged) {
+        console.log('🔍 No active staking position found - stopping auto-refresh')
+      }
+      return
+    }
+
+    if (positionStatusChanged) {
+      console.log('🔄 Active staking position detected - starting auto-refresh every 10s')
+    }
+    
     const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing staking data...')
       refetch()
     }, 10000) // 每10秒刷新一次
 
-    return () => clearInterval(interval)
-  }, [address, refetch])
+    return () => {
+      if (positionStatusChanged) {
+        console.log('🛑 Stopping auto-refresh')
+      }
+      clearInterval(interval)
+    }
+  }, [
+    address, 
+    safeUserStakeInfo?.stakeAmount, 
+    safeUserStakeInfo?.lastUnstakeTime, 
+    safeUserRewards, 
+    hasActivePositionPrev, 
+    refetch
+  ])
 
   // 计算总加载状态 - 类型安全版本
   const totalIsLoading = useMemo(() => {

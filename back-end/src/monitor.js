@@ -125,21 +125,23 @@ async function monitorEvents(network) {
         hookData,
         event
       ) => {
+        console.log(`💸 DepositForBurn event detected!! `);
+
         console.log(
-          `💸 DepositForBurn: `,
-          `Burn Token: ${burnToken}`,
-          `Amount: ${amount}`,
-          `Depositor: ${depositor}`,
-          `Mint Recipient: ${mintRecipient}`,
-          `Destination Domain: ${destinationDomain}`,
-          `Destination Token Messenger: ${destinationTokenMessenger}`,
-          `Destination Caller: ${destinationCaller}`,
-          `Max Fee: ${maxFee}`,
-          `Min Finality Threshold: ${minFinalityThreshold}`,
-          `Hook Data: ${hookData}`
+          `event txHash: ${event.log.transactionHash}, blockNumber: ${event.log.blockNumber}`
         );
-        console.log("event txHash: ", event.log.transactionHash);
-        console.log("event blockNumber: ", event.log.blockNumber);
+        console.log(`Burn Token: ${burnToken}`);
+        console.log(`Amount: ${amount}`);
+        console.log(`Depositor: ${depositor}`);
+        console.log(`Mint Recipient: ${mintRecipient}`);
+        console.log(`Destination Domain: ${destinationDomain}`);
+        console.log(
+          `Destination Token Messenger: ${destinationTokenMessenger}`
+        );
+        console.log(`Destination Caller: ${destinationCaller}`);
+        console.log(`Max Fee: ${maxFee}`);
+        console.log(`Min Finality Threshold: ${minFinalityThreshold}`);
+        console.log(`Hook Data: ${hookData}`);
 
         const attestation = await retrieveAttestation(
           network,

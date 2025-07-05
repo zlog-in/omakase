@@ -47,7 +47,7 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
     function _stake(uint256 _chainId, address _staker, uint256 _amount) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
         stakeInfo.stakeReward += stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
-            / IOFT(oft).sharedDecimals();
+            / (10 ** IOFT(oft).sharedDecimals());
         stakeInfo.stakeAmount += _amount;
         stakeInfo.lastStakeTime = block.timestamp;
         stakeInfo.lastUnstakeTime = 0;
@@ -61,7 +61,7 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
         require(stakeInfo.lastUnstakeTime == 0, "Stake: already unstaked");
 
         stakeInfo.stakeReward += stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
-            / IOFT(oft).sharedDecimals();
+            / (10 ** IOFT(oft).sharedDecimals());
         stakeInfo.lastUnstakeTime = block.timestamp;
 
         emit Unstaked(_chainId, _staker, stakeInfo.stakeAmount);
@@ -93,6 +93,6 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
         return stakeInfo.stakeReward
             + stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
-                / IOFT(oft).sharedDecimals();
+                / (10 ** IOFT(oft).sharedDecimals());
     }
 }

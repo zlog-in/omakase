@@ -15,7 +15,7 @@ import {OFTComposeMsgCodec} from "../layerzerolabs/lz-evm-oapp-v2/contracts/oft/
 import {LzMessageLib} from "./library/LzMessageLib.sol";
 import {IWaiter} from "./interfaces/IWaiter.sol";
 
-abstract contract Waiter is BaseContractUpgradeable, IWaiter {
+contract Waiter is BaseContractUpgradeable, IWaiter {
     using SafeERC20 for IERC20;
     using OptionsBuilder for bytes;
     using OFTComposeMsgCodec for bytes;
@@ -52,11 +52,6 @@ abstract contract Waiter is BaseContractUpgradeable, IWaiter {
         bytes memory claimPayload = LzMessageLib.encodeClaimPayload(msg.sender);
         bytes memory claimMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.CLAIM), claimPayload);
         _sendMsg(claimMsg, 0);
-    }
-
-    // =============================== CCPT Functions ===============================
-    function receiveReward(bytes calldata _message, bytes calldata _attestation) external {
-        // TODO: Implement
     }
 
     // =============================== LayerZero Functions ===============================

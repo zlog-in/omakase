@@ -14,11 +14,4 @@ interface IWaiter {
     function unstake() external payable;
     function withdraw() external payable;
     function claim() external payable;
-
-    // =============================== CCPT Functions ===============================
-    function receiveReward(bytes calldata _message, bytes calldata _attestation) external;
-
-    // =============================== Admin Functions ===============================
-    function setToken(address _token) external;
-    function setOFT(address _oft) external;
 }

@@ -46,7 +46,7 @@ const CLIENTS = {
 const SEPOLIA_TOKEN_MESSENGER = "0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa";
 const SEPOLIA_MESSAGE_TRANSMITTER =
   "0xe737e5cebeeba77efe34d4aa090756590b1ce275";
-const SEPOLIA_CHEF = "0xBdfC20679310cc77847bFAAdC5af49dAffeE075d";
+const SEPOLIA_CHEF = "0xcaa8340AA4a760cF83D9e712597AD045fA1b3C50";
 
 async function retrieveAttestation(srcNetwork, transactionHash) {
   console.log("Retrieving attestation...");
@@ -72,29 +72,30 @@ async function retrieveAttestation(srcNetwork, transactionHash) {
   }
 }
 
-async function mintUSDC(dstNetwork, attestation) {
-  console.log(`Minting USDC on ${dstNetwork}...`);
-  const dstClient = CLIENTS[dstNetwork];
-  const mintTx = await dstClient.sendTransaction({
-    to: SEPOLIA_MESSAGE_TRANSMITTER,
+async function mintUSDC(srcNetwork, domainId, attestation) {
+  console.log(`Minting USDC on ${srcNetwork}...`);
+  const srcClient = CLIENTS[srcNetwork];
+  const mintTx = await srcClient.sendTransaction({
+    to: SEPOLIA_CHEF,
     data: encodeFunctionData({
       abi: [
         {
           type: "function",
-          name: "receiveMessage",
+          name: "sendReward",
           stateMutability: "nonpayable",
           inputs: [
-            { name: "message", type: "bytes" },
-            { name: "attestation", type: "bytes" },
+            { name: "_domainId", type: "uint32" },
+            { name: "_message", type: "bytes" },
+            { name: "_attestation", type: "bytes" },
           ],
           outputs: [],
         },
       ],
-      functionName: "receiveMessage",
-      args: [attestation.message, attestation.attestation],
+      functionName: "sendReward",
+      args: [domainId, attestation.message, attestation.attestation],
     }),
   });
-  console.log(`Mint Tx: ${EXPLORER_URL[dstNetwork]}/tx/${mintTx}`);
+  console.log(`Mint Tx: ${EXPLORER_URL[srcNetwork]}/tx/${mintTx}`);
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
@@ -131,7 +132,7 @@ async function monitorEvents(network) {
         );
         const dstNetwork = DOMAIN_ID_MAP[domainId];
         console.log("dstNetwork: ", dstNetwork);
-        await mintUSDC(dstNetwork, attestation);
+        await mintUSDC(network, domainId, attestation);
         console.log("\n");
       }
     );

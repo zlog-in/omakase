@@ -102,7 +102,7 @@ export function NetworkSelector() {
                 </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="w-[200px]">
+            <DropdownMenuContent align="end" className="w-[200px] bg-white dark:bg-gray-900 backdrop-blur-none border border-gray-200 dark:border-gray-700">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
                     Select Network
                 </DropdownMenuLabel>
@@ -150,10 +150,27 @@ export function NetworkSelector() {
                     Chain Information
                 </DropdownMenuLabel>
                 {currentChainConfig && (
-                    <div className="px-2 py-1 text-xs text-muted-foreground">
-                        <div>Chain ID: {chainId}</div>
-                        <div>Type: {currentChainConfig.isHub ? 'Hub Chain' : 'Spoke Chain'}</div>
-                        <div>LayerZero EID: {currentChainConfig.config.layerZeroEndpointId}</div>
+                    <div className="mx-2 mb-1">
+                        <div className="bg-gray-100 dark:bg-gray-800 rounded-md p-3 border border-gray-200 dark:border-gray-700">
+                            <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400">Chain ID:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">{chainId}</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400">Type:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {currentChainConfig.isHub ? 'Hub Chain' : 'Spoke Chain'}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400">LayerZero EID:</span>
+                                    <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {currentChainConfig.config.layerZeroEndpointId}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </DropdownMenuContent>

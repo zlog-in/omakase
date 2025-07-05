@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import { useAccount, useChainId } from 'wagmi'
 import { StakeForm } from '@/components/stakeForm'
@@ -46,13 +47,35 @@ function getTokenInfo(chainId: number) {
 
 // 简化的统计组件（内联）
 function StakingStats() {
+  const [isMounted, setIsMounted] = useState(false)
   const { getGlobalStats } = useStaking()
   const globalStats = getGlobalStats()
-  const { address } = useAccount()
   const chainId = useChainId()
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // 获取当前链的代币信息
   const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
+
+  if (!isMounted) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-20 mb-2"></div>
+                <div className="h-6 bg-gray-200 rounded w-16 mb-1"></div>
+                <div className="h-3 bg-gray-200 rounded w-24"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
   const stats = [
     {
@@ -110,11 +133,16 @@ function StakingStats() {
 
 // 简化的Unstake警告组件（内联）
 function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
+  const [isMounted, setIsMounted] = useState(false)
   const { cancelUnstake, isLoading } = useStaking()
   const chainId = useChainId()
   const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
 
-  if (stakingStatus.status !== StakingStatus.UNSTAKED) {
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  if (!isMounted || stakingStatus.status !== StakingStatus.UNSTAKED) {
     return null
   }
 
@@ -163,9 +191,15 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
 }
 
 export default function Home() {
+  const [isMounted, setIsMounted] = useState(false)
   const { address } = useAccount()
   const chainId = useChainId()
   const { getStakingStatus } = useStaking()
+
+  // 确保客户端水合完成后才渲染钱包相关内容
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   const stakingStatus = address ? getStakingStatus() : null
   const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN', chainName: 'Unknown Network' }
@@ -182,7 +216,7 @@ export default function Home() {
             <p className="text-gray-600 mt-2">
               Stake OMA tokens across multiple chains and earn USDC rewards
             </p>
-            {address && chainId && (
+            {isMounted && address && chainId && (
               <p className="text-sm text-gray-500 mt-1">
                 Connected: {tokenInfo.chainName} • Token: {tokenInfo.symbol}
               </p>
@@ -196,7 +230,7 @@ export default function Home() {
         </header>
 
         {/* Global Statistics */}
-        {address && (
+        {isMounted && address && (
           <div className="mb-8">
             <h2 className="text-xl font-semibold mb-4">Protocol Overview</h2>
             <StakingStats />
@@ -204,7 +238,7 @@ export default function Home() {
         )}
 
         {/* Feature Highlights */}
-        {!address && (
+        {isMounted && !address && (
           <div className="mb-8">
             <Card>
               <CardContent className="p-6">
@@ -259,7 +293,7 @@ export default function Home() {
         )}
 
         {/* Main Content */}
-        {address ? (
+        {isMounted && address ? (
           <div className="space-y-8">
             {/* Unstake Warning (if applicable) */}
             {stakingStatus && stakingStatus.status === StakingStatus.UNSTAKED && (
@@ -279,7 +313,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-        ) : (
+        ) : isMounted ? (
           /* Not Connected State */
           <div className="text-center py-12">
             <Card className="max-w-md mx-auto">
@@ -303,6 +337,14 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        ) : (
+          /* Loading state during hydration */
+          <div className="text-center py-12">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-48 mx-auto mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-32 mx-auto"></div>
+            </div>
           </div>
         )}
 

@@ -1,48 +1,48 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-// =============================== Payload Types ===============================
-enum PayloadTypes {
-    LZ_RECEIVE,
-    STAKE_OMA,
-    UNSTAKE_OMA,
-    WITHDRAW_OMA,
-    WITHDRAW_FINISH,
-    CLAIM_REWARD,
-    CLAIM_FINISH,
-    SNED_REWARD
-}
-
-// =============================== LzMessage ===============================
-struct LzMessage {
-    uint8 payloadType;
-    bytes payload;
-}
-
-// =============================== Payloads ===============================
-struct StakePayload {
-    address staker;
-    uint256 amount;
-}
-
-struct UnstakePayload {
-    address staker;
-}
-
-struct WithdrawPayload {
-    address staker;
-}
-
-struct WithdrawFinishPayload {
-    address staker;
-    uint256 amount;
-}
-
-struct ClaimPayload {
-    address staker;
-}
-
 library LzMessageLib {
+    // =============================== Payload Types ===============================
+    enum PayloadTypes {
+        LZ_RECEIVE,
+        STAKE,
+        UNSTAKE,
+        WITHDRAW,
+        WITHDRAW_FINISH,
+        CLAIM,
+        CLAIM_FINISH,
+        SNED_REWARD
+    }
+
+    // =============================== LzMessage ===============================
+    struct LzMessage {
+        uint8 payloadType;
+        bytes payload;
+    }
+
+    // =============================== Payloads ===============================
+    struct StakePayload {
+        address staker;
+        uint256 amount;
+    }
+
+    struct UnstakePayload {
+        address staker;
+    }
+
+    struct WithdrawPayload {
+        address staker;
+    }
+
+    struct WithdrawFinishPayload {
+        address staker;
+        uint256 amount;
+    }
+
+    struct ClaimPayload {
+        address staker;
+    }
+
     function encodeLzMessage(uint8 _payloadType, bytes memory _payload) internal pure returns (bytes memory) {
         LzMessage memory lzMessage = LzMessage({payloadType: _payloadType, payload: _payload});
         return abi.encode(lzMessage);
@@ -61,7 +61,7 @@ library LzMessageLib {
         return StakePayload({staker: staker, amount: amount});
     }
 
-    function encodeUnstakeMsg(address _staker) internal pure returns (bytes memory) {
+    function encodeUnstakePayload(address _staker) internal pure returns (bytes memory) {
         return abi.encode(_staker);
     }
 

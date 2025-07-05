@@ -9,7 +9,6 @@ interface IChef {
     event RewardSent(uint256 indexed chainId, address indexed staker, uint256 amount);
 
     // =============================== View Functions ===============================
-    function getTotalStakedAmount() external view returns (uint256);
     function getStakedAmount(address _staker) external view returns (uint256);
     function getUnstakePeriod(address _staker) external view returns (uint256);
     function getReward(address _staker) external view returns (uint256);

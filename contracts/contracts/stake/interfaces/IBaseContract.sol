@@ -3,15 +3,6 @@ pragma solidity ^0.8.20;
 
 import {ILayerZeroComposer} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroComposer.sol";
 
-// =============================== Payload Types ===============================
-enum PayloadTypes {
-    LZ_RECEIVE,
-    STAKE_ORDER,
-    UNSTAKE_ORDER,
-    WITHDRAW_ORDER,
-    CLAIM_REWARD
-}
-
 struct LzOptions {
     uint128 gas;
     uint128 value;

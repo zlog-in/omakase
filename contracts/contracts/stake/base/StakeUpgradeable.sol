@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {CCTPHandlerUpgradeable} from "./CCTPHandlerUpgradeable.sol";
-import {IOFT} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
+import {IOFT} from "../../layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 
 abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
     struct StakeInfo {
@@ -67,7 +67,7 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
         emit Unstaked(_chainId, _staker, stakeInfo.stakeAmount);
     }
 
-    function _withdraw(uint256 _chainId, address _staker) internal {
+    function _withdraw(uint256 _chainId, address _staker) internal returns (uint256) {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
         require(block.timestamp - stakeInfo.lastUnstakeTime >= UNSTAKE_PERIOD, "Chef: Unstake period not passed");
         uint256 amount = stakeInfo.stakeAmount;
@@ -75,19 +75,15 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
         stakeInfo.lastStakeTime = 0;
         stakeInfo.lastUnstakeTime = 0;
         totalStakedAmount -= amount;
-
-        // TODO: Transfer oft back to staker
-
         emit Withdrawn(_chainId, _staker, amount);
+        return amount;
     }
 
     function _claim(uint256 _chainId, address _staker) internal {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
-
         uint256 reward = _getUserReward(_staker);
         stakeInfo.stakeReward = 0;
         stakeInfo.lastUnstakeTime = 0;
-
         _burnUSDC(_chainId, _staker, reward);
 
         emit Claimed(_chainId, _staker, reward);

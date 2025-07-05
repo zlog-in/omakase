@@ -10,10 +10,10 @@ interface IWaiter {
     event ClaimFinished(address indexed staker, uint256 amount);
 
     // =============================== User Functions ===============================
-    function stake(uint256 amount) external;
-    function unstake() external;
-    function withdraw() external;
-    function claim() external;
+    function stake(uint256 _amount) external payable;
+    function unstake() external payable;
+    function withdraw() external payable;
+    function claim() external payable;
 
     // =============================== CCPT Functions ===============================
     function receiveReward(bytes calldata _message, bytes calldata _attestation) external;

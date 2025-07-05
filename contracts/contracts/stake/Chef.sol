@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BaseContractUpgradeable} from "./base/BaseContractUpgradeable.sol";
 import {IChef} from "./interfaces/IChef.sol";
+import {StakeUpgradeable} from "./base/StakeUpgradeable.sol";
 
-abstract contract Chef is BaseContractUpgradeable, IChef {
+abstract contract Chef is StakeUpgradeable, IChef {
     mapping(uint256 => address) public waiters;
     address public backend;
 
@@ -32,6 +32,9 @@ abstract contract Chef is BaseContractUpgradeable, IChef {
     function setOFT(address _oft) external {
         // TODO: Implement
     }
+
+    // =============================== Internal Functions ===============================
+    function _stake(address _staker, uint256 _amount) internal {}
 
     receive() external payable {}
     fallback() external payable {}

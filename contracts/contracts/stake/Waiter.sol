@@ -93,7 +93,7 @@ abstract contract Waiter is BaseContractUpgradeable, IWaiter {
         }
     }
 
-    function _sendMsg(bytes memory _msg, uint256 _amount) internal {
+    function _sendMsg(bytes memory _msg, uint256 _amount) internal whenNotPaused {
         SendParam memory sendParam = SendParam({
             dstEid: _getEid(hubChainId),
             to: OFTMsgCodec.addressToBytes32(chef),

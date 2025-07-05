@@ -15,7 +15,7 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
 
     uint256[46] private __gap;
 
-    function settokenMessager(address _tokenMessager) external onlyOwner {
+    function setTokenMessager(address _tokenMessager) external onlyOwner {
         tokenMessager = ITokenMessenger(_tokenMessager);
     }
 
@@ -25,11 +25,14 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
     }
 
     // =============================== CCTP Functions ===============================
-    function _sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation) internal {
+    function _sendReward(uint256 _chainId, bytes calldata _message, bytes calldata _attestation)
+        internal
+        whenNotPaused
+    {
         // TODO: Implement
     }
 
-    function _burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) internal {
+    function _burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) internal whenNotPaused {
         IERC20(usdc).approve(address(tokenMessager), _amount);
         require(chainId2DomainId[_chainId] > 0, "CCTPHandler: Invalid CCTP Domain");
         ITokenMessenger(tokenMessager).depositForBurn(

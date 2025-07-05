@@ -32,7 +32,7 @@ contract Chef is StakeUpgradeable, IChef {
         bytes calldata _message,
         address, /*_executor*/
         bytes calldata /*_extraData*/
-    ) public payable override {
+    ) public payable override whenNotPaused {
         bytes memory composeMsg = _message.composeMsg();
         uint32 srcEid = _message.srcEid();
         address remoteSender = OFTComposeMsgCodec.bytes32ToAddress(_message.composeFrom());

@@ -7,7 +7,9 @@ enum PayloadTypes {
     STAKE_OMA,
     UNSTAKE_OMA,
     WITHDRAW_OMA,
+    WITHDRAW_FINISH,
     CLAIM_REWARD,
+    CLAIM_FINISH,
     SNED_REWARD
 }
 
@@ -29,6 +31,11 @@ struct UnstakePayload {
 
 struct WithdrawPayload {
     address staker;
+}
+
+struct WithdrawFinishPayload {
+    address staker;
+    uint256 amount;
 }
 
 struct ClaimPayload {
@@ -63,13 +70,22 @@ library LzMessageLib {
         return UnstakePayload({staker: staker});
     }
 
-    function encodeWithdrawMsg(address _staker) internal pure returns (bytes memory) {
+    function encodeWithdrawPayload(address _staker) internal pure returns (bytes memory) {
         return abi.encode(_staker);
     }
 
     function decodeWithdrawPayload(bytes memory _payload) internal pure returns (WithdrawPayload memory) {
         (address staker) = abi.decode(_payload, (address));
         return WithdrawPayload({staker: staker});
+    }
+
+    function encodeWithdrawFinishPayload(address _staker, uint256 _amount) internal pure returns (bytes memory) {
+        return abi.encode(_staker, _amount);
+    }
+
+    function decodeWithdrawFinishPayload(bytes memory _payload) internal pure returns (WithdrawFinishPayload memory) {
+        (address staker, uint256 amount) = abi.decode(_payload, (address, uint256));
+        return WithdrawFinishPayload({staker: staker, amount: amount});
     }
 
     function encodeClaimPayload(address _staker) internal pure returns (bytes memory) {

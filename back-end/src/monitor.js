@@ -45,6 +45,7 @@ const CLIENTS = {
 const SEPOLIA_TOKEN_MESSENGER = "0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa";
 const SEPOLIA_MESSAGE_TRANSMITTER =
   "0xe737e5cebeeba77efe34d4aa090756590b1ce275";
+const SEPOLIA_CHEF = "0xBdfC20679310cc77847bFAAdC5af49dAffeE075d";
 
 async function retrieveAttestation(srcNetwork, transactionHash) {
   console.log("Retrieving attestation...");
@@ -99,55 +100,31 @@ async function monitorEvents(network) {
   try {
     console.log(`🔗 Connecting to ${network}...`);
     const provider = new ethers.JsonRpcProvider(RPC_URL[network]);
-    const contract = new ethers.Contract(
-      SEPOLIA_TOKEN_MESSENGER,
-      ABI,
-      provider
-    );
+    const contract = new ethers.Contract(SEPOLIA_CHEF, ABI, provider);
 
-    console.log("✅ Connected! Monitoring for DepositForBurn events...");
-    console.log("📊 Contract:", SEPOLIA_TOKEN_MESSENGER);
+    console.log("✅ Connected! Monitoring for BurnUSDC events...");
+    console.log("📊 Contract:", SEPOLIA_CHEF);
     console.log("🛑 Press Ctrl+C to stop\n");
 
-    // Listen for DepositForBurn events
+    // Listen for BurnUSDC events
     contract.on(
       EVENT_NAME,
-      async (
-        burnToken,
-        amount,
-        depositor,
-        mintRecipient,
-        destinationDomain,
-        destinationTokenMessenger,
-        destinationCaller,
-        maxFee,
-        minFinalityThreshold,
-        hookData,
-        event
-      ) => {
-        console.log(`💸 DepositForBurn event detected!! `);
+      async (chainId, domainId, mintRecipient, amount, event) => {
+        console.log(`💸 BurnUSDC event detected!! `);
 
         console.log(
           `event txHash: ${event.log.transactionHash}, blockNumber: ${event.log.blockNumber}`
         );
-        console.log(`Burn Token: ${burnToken}`);
-        console.log(`Amount: ${amount}`);
-        console.log(`Depositor: ${depositor}`);
+        console.log(`Chain ID: ${chainId}`);
+        console.log(`Domain ID: ${domainId}`);
         console.log(`Mint Recipient: ${mintRecipient}`);
-        console.log(`Destination Domain: ${destinationDomain}`);
-        console.log(
-          `Destination Token Messenger: ${destinationTokenMessenger}`
-        );
-        console.log(`Destination Caller: ${destinationCaller}`);
-        console.log(`Max Fee: ${maxFee}`);
-        console.log(`Min Finality Threshold: ${minFinalityThreshold}`);
-        console.log(`Hook Data: ${hookData}`);
+        console.log(`Amount: ${amount}`);
 
         const attestation = await retrieveAttestation(
           network,
           event.log.transactionHash
         );
-        const dstNetwork = DOMAIN_ID_MAP[destinationDomain];
+        const dstNetwork = DOMAIN_ID_MAP[domainId];
         console.log("dstNetwork: ", dstNetwork);
         await mintUSDC(dstNetwork, attestation);
         console.log("\n");
@@ -160,4 +137,4 @@ async function monitorEvents(network) {
 }
 
 // Start monitoring
-monitorEvents("sepolia");
+monitorEvents("baseSepolia");

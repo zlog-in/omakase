@@ -25,31 +25,19 @@ const DOMAIN_ID_MAP = {
   3: "arbitrumSepolia",
 };
 
-const EVENT_NAME = "DepositForBurn";
+const EVENT_NAME = "BurnUSDC";
 
 // Contract ABI - Minimal ABI for Token Messenger
 const ABI = [
   {
     anonymous: false,
-    inputs: [{ indexed: false, name: "message", type: "bytes" }],
-    name: "MessageSent",
-    type: "event",
-  },
-  {
-    anonymous: false,
     inputs: [
-      { indexed: true, name: "burnToken", type: "address" },
+      { indexed: true, name: "chainId", type: "uint256" },
+      { indexed: true, name: "domainId", type: "uint32" },
+      { indexed: true, name: "mintRecipient", type: "address" },
       { indexed: false, name: "amount", type: "uint256" },
-      { indexed: true, name: "depositor", type: "address" },
-      { indexed: false, name: "mintRecipient", type: "bytes32" },
-      { indexed: false, name: "destinationDomain", type: "uint32" },
-      { indexed: false, name: "destinationTokenMessenger", type: "bytes32" },
-      { indexed: false, name: "destinationCaller", type: "bytes32" },
-      { indexed: false, name: "maxFee", type: "uint256" },
-      { indexed: true, name: "minFinalityThreshold", type: "uint32" },
-      { indexed: false, name: "hookData", type: "bytes" },
     ],
-    name: "DepositForBurn",
+    name: "BurnUSDC",
     type: "event",
   },
 ];

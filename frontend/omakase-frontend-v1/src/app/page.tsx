@@ -356,7 +356,7 @@ export default function Home() {
           </div>
 
           <p className="text-xs">
-            © 2025 Omakase Protocol, Built with ❤ in Cannes and Support from LayerZero and Circle
+            © 2025 Omakase Protocol, Built with ❤ in Cannes
           </p>
         </footer>
       </div>

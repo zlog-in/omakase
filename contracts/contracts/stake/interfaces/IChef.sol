@@ -11,7 +11,7 @@ interface IChef {
     // =============================== View Functions ===============================
     function getTotalStakedAmount() external view returns (uint256);
     function getStakedAmount(address _staker) external view returns (uint256);
-    function getUnstakeLockTime(address _staker) external view returns (uint256);
+    function getUnstakePeriod(address _staker) external view returns (uint256);
     function getReward(address _staker) external view returns (uint256);
 
     // =============================== CCTP Functions ===============================

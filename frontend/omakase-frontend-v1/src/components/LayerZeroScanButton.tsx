@@ -38,12 +38,12 @@ export function LayerZeroScanButton({
 
     // 构建LayerZero Scan URL
     const buildLayerZeroScanUrl = (): string => {
-        if (!address || !chainId) return 'https://layerzeroscan.com'
+        if (!address || !chainId) return 'https://testnet.layerzeroscan.com'
 
         const currentChainEid = LAYERZERO_ENDPOINT_IDS[chainId as keyof typeof LAYERZERO_ENDPOINT_IDS]
         const hubChainEid = LAYERZERO_ENDPOINT_IDS[SUPPORTED_CHAINS.BASE_SEPOLIA.id]
 
-        if (!currentChainEid) return 'https://layerzeroscan.com'
+        if (!currentChainEid) return 'https://testnet.layerzeroscan.com'
 
         // 构建过滤器参数
         const params = new URLSearchParams({

@@ -4,11 +4,18 @@ pragma solidity ^0.8.20;
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {IERC20Metadata, IERC20} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILayerZeroComposer} from "@layerzerolabs/lz-evm-protocol-v2/contracts/interfaces/ILayerZeroComposer.sol";
 import {IBaseContract} from "../interfaces/IBaseContract.sol";
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {PayloadTypes, LzOptions} from "../interfaces/IBaseContract.sol";
+import {OFTComposeMsgCodec} from "../../layerzerolabs/lz-evm-oapp-v2/contracts/oft/libs/OFTComposeMsgCodec.sol";
 
+/**
+ * @dev The Base contract is used for Waiter and Chef contracts to inherit from,
+ * it contains the common functions and variables for the Waiter and Chef contracts.
+ */
 abstract contract BaseContractUpgradeable is
     UUPSUpgradeable,
     OwnableUpgradeable,
@@ -17,6 +24,8 @@ abstract contract BaseContractUpgradeable is
     IBaseContract
 {
     using OptionsBuilder for bytes;
+    using OFTComposeMsgCodec for bytes;
+    using SafeERC20 for IERC20;
 
     mapping(address => bool) public localComposeMsgSender;
     mapping(uint32 => mapping(address => bool)) public remoteComposeMsgSender;

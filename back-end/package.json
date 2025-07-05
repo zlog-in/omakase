@@ -2,10 +2,10 @@
   "name": "omakase-backend",
   "version": "1.0.0",
   "description": "Backend for Omakase project",
-  "main": "src/simple-monitor.js",
+  "main": "src/monitor.js",
   "scripts": {
-    "start": "node src/simple-monitor.js",
-    "dev": "nodemon src/simple-monitor.js",
+    "start": "node src/monitor.js",
+    "dev": "nodemon src/monitor.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

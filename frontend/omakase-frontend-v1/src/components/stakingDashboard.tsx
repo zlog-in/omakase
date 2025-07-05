@@ -1,16 +1,45 @@
 'use client'
 
 import { useStaking, useUnstakeCountdown, useRealtimeRewards } from '@/hooks/useStaking'
-import { useAccount } from 'wagmi'
+import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { AlertTriangle, Clock, TrendingUp, Zap, RotateCcw } from 'lucide-react'
 import { StakingStatus } from '@/types'
 import { formatUSDCAmount } from '@/lib/utils'
+import { SUPPORTED_CHAINS } from '@/lib/constants'
+
+// 代币信息映射
+const TOKEN_INFO = {
+    [SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id]: {
+        name: 'Omakase',
+        symbol: 'OMA',
+        description: 'Native ERC20 token with LayerZero Adapter'
+    },
+    [SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id]: {
+        name: 'Omakase OFT',
+        symbol: 'OMA',
+        description: 'LayerZero OFT implementation'
+    },
+    [SUPPORTED_CHAINS.BASE_SEPOLIA.id]: {
+        name: 'Omakase OFT',
+        symbol: 'OMA',
+        description: 'LayerZero OFT implementation'
+    },
+} as const
+
+function getTokenInfo(chainId: number) {
+    return TOKEN_INFO[chainId as keyof typeof TOKEN_INFO] || {
+        name: 'Unknown Token',
+        symbol: 'TOKEN',
+        description: 'Unknown token'
+    }
+}
 
 export function StakingDashboard() {
     const { address } = useAccount()
+    const chainId = useChainId()
     const {
         getStakingStatus,
         unstake,
@@ -23,6 +52,9 @@ export function StakingDashboard() {
         canClaim,
         getRewardCalculation
     } = useStaking()
+
+    // 获取当前链的代币信息
+    const tokenInfo = chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
 
     if (!address) {
         return (
@@ -75,7 +107,7 @@ export function StakingDashboard() {
     const getStatusDescription = (status: StakingStatus) => {
         switch (status) {
             case StakingStatus.ACTIVE:
-                return "Your tokens are actively earning rewards"
+                return `Your ${tokenInfo.symbol} tokens are actively earning rewards`
             case StakingStatus.UNSTAKED:
                 return "Unstake initiated, waiting for lock period to end"
             case StakingStatus.WITHDRAWN:
@@ -108,6 +140,14 @@ export function StakingDashboard() {
                                     ✨ Earning rewards
                                 </div>
                             )}
+                            {chainId && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                    {chainId === SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id ? 'Ethereum Sepolia' :
+                                        chainId === SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id ? 'Arbitrum Sepolia' :
+                                            chainId === SUPPORTED_CHAINS.BASE_SEPOLIA.id ? 'Base Sepolia (Hub)' :
+                                                'Unknown Network'}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </CardHeader>
@@ -117,17 +157,20 @@ export function StakingDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="text-center p-4 bg-blue-50 rounded-lg">
                             <p className="text-sm text-gray-600">Staked Amount</p>
-                            <p className="text-xl font-bold text-blue-600">{stakingStatus.stakedAmount} OFT</p>
+                            <p className="text-xl font-bold text-blue-600">{stakingStatus.stakedAmount} {tokenInfo.symbol}</p>
+                            <p className="text-xs text-gray-500 mt-1">{tokenInfo.description}</p>
                         </div>
                         <div className="text-center p-4 bg-green-50 rounded-lg">
                             <p className="text-sm text-gray-600">Current Rewards</p>
                             <p className="text-xl font-bold text-green-600">
                                 {formatUSDCAmount(realtimeRewards)} USDC
                             </p>
+                            <p className="text-xs text-gray-500 mt-1">Real-time calculation</p>
                         </div>
                         <div className="text-center p-4 bg-purple-50 rounded-lg">
                             <p className="text-sm text-gray-600">Daily Estimate</p>
                             <p className="text-xl font-bold text-purple-600">{stakingStatus.estimatedDailyReward} USDC</p>
+                            <p className="text-xs text-gray-500 mt-1">Projected earnings</p>
                         </div>
                     </div>
 
@@ -147,7 +190,7 @@ export function StakingDashboard() {
                                     {stakingStatus.isUnstakeCancellable && (
                                         <div className="mt-3 p-3 bg-white rounded border">
                                             <p className="text-sm text-gray-700 mb-2">
-                                                💡 <strong>Tip:</strong> You can cancel this unstake by staking additional tokens.
+                                                💡 <strong>Tip:</strong> You can cancel this unstake by staking additional {tokenInfo.symbol} tokens.
                                                 This will reset your staking timer and you'll continue earning rewards.
                                             </p>
                                             <Button
@@ -177,7 +220,7 @@ export function StakingDashboard() {
                                 className="gap-2"
                             >
                                 <Clock className="w-4 h-4" />
-                                Unstake
+                                Unstake {tokenInfo.symbol}
                             </Button>
                         )}
 
@@ -188,7 +231,7 @@ export function StakingDashboard() {
                                 className="gap-2"
                             >
                                 <TrendingUp className="w-4 h-4" />
-                                Withdraw Tokens
+                                Withdraw {tokenInfo.symbol}
                             </Button>
                         )}
 
@@ -240,7 +283,7 @@ export function StakingDashboard() {
                     {stakingStatus.status === StakingStatus.ACTIVE && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                             <p className="text-sm text-blue-700">
-                                💰 You're earning approximately <strong>{rewardCalculation.projectedDailyReward} USDC</strong> per day.
+                                💰 You're earning approximately <strong>{rewardCalculation.projectedDailyReward} USDC</strong> per day from your {stakingStatus.stakedAmount} {tokenInfo.symbol} stake.
                                 Rewards are calculated continuously and can be claimed at any time.
                             </p>
                         </div>
@@ -274,6 +317,12 @@ export function StakingDashboard() {
                                 <span className="text-sm text-gray-600">Staking Duration:</span>
                                 <span className="text-sm font-medium">
                                     {Math.floor(stakingStatus.stakingDuration / 86400)} days, {Math.floor((stakingStatus.stakingDuration % 86400) / 3600)} hours
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-gray-600">Token Type:</span>
+                                <span className="text-sm font-medium">
+                                    {tokenInfo.description}
                                 </span>
                             </div>
                         </div>

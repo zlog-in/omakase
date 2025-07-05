@@ -1,4 +1,5 @@
 import { useReadContract, useWriteContract, useAccount } from 'wagmi'
+import { useEffect } from 'react'
 import { Address } from 'viem'
 import { WAITER_ABI, CHEF_ABI, OFT_ABI } from '@/lib/contracts'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
@@ -180,7 +181,7 @@ export function useChefContract() {
   }
 }
 
-// Chef contract read functions - 修复类型问题
+// Chef contract read functions - 修复toast调用问题
 export function useChefReadContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
 
@@ -191,14 +192,17 @@ export function useChefReadContract() {
       functionName: 'getTotalStakedAmount',
     })
 
-    if (result.error) {
-      toast.error('Failed to fetch total staked amount')
-    }
+    // 移除渲染期间的toast调用
+    useEffect(() => {
+      if (result.error) {
+        console.error('Failed to fetch total staked amount:', result.error)
+      }
+    }, [result.error])
 
     return result
   }
 
-  // 修复：明确处理tuple返回类型
+  // 修复：明确处理tuple返回类型，移除渲染期间的toast
   const getUserStakeInfo = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
@@ -210,9 +214,12 @@ export function useChefReadContract() {
       }
     })
 
-    if (result.error && staker) {
-      toast.error('Failed to fetch your stake information')
-    }
+    // 使用useEffect来处理错误，避免渲染期间的状态更新
+    useEffect(() => {
+      if (result.error && staker) {
+        console.error('Failed to fetch stake information for:', staker, result.error)
+      }
+    }, [result.error, staker])
 
     // 修复：明确类型转换和安全处理
     const transformedResult = {
@@ -240,9 +247,11 @@ export function useChefReadContract() {
       }
     })
 
-    if (result.error && staker) {
-      toast.error('Failed to fetch your rewards')
-    }
+    useEffect(() => {
+      if (result.error && staker) {
+        console.error('Failed to fetch rewards for:', staker, result.error)
+      }
+    }, [result.error, staker])
 
     return result
   }
@@ -259,10 +268,12 @@ export function useChefReadContract() {
       }
     })
 
-    if (result.error && staker) {
-      // 这个函数在没有unstake时会revert，这是正常的
-      console.log('No unstake in progress (expected for active stakes)')
-    }
+    useEffect(() => {
+      if (result.error && staker) {
+        // 这个函数在没有unstake时会revert，这是正常的
+        console.log('No unstake in progress (expected for active stakes)')
+      }
+    }, [result.error, staker])
 
     return result
   }
@@ -335,10 +346,13 @@ export function useOFTContract(chainId: number) {
   const getOFTAddress = (chainId: number): Address | null => {
     switch (chainId) {
       case SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id:
+        // 在Ethereum Sepolia上，使用Omakase原生代币地址
         return SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.oftAddress as Address
       case SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id:
+        // 在Arbitrum Sepolia上，使用OFT地址
         return SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.oftAddress as Address
       case SUPPORTED_CHAINS.BASE_SEPOLIA.id:
+        // 在Base Sepolia上，使用OFT地址
         return SUPPORTED_CHAINS.BASE_SEPOLIA.oftAddress as Address
       default:
         return null
@@ -386,9 +400,11 @@ export function useOFTContract(chainId: number) {
       }
     })
 
-    if (result.error && account && contractAddress) {
-      toast.error('Failed to fetch token balance')
-    }
+    useEffect(() => {
+      if (result.error && account && contractAddress) {
+        console.error('Failed to fetch token balance for:', account, result.error)
+      }
+    }, [result.error, account, contractAddress])
 
     return result
   }

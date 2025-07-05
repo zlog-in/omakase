@@ -1,7 +1,7 @@
 'use client'
 
 import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useAccount } from 'wagmi'
+import { useAccount, useChainId } from 'wagmi'
 import { StakeForm } from '@/components/stakeForm'
 import { StakingDashboard } from '@/components/stakingDashboard'
 import { NetworkSelector } from '@/components/networkSelector'
@@ -11,16 +11,53 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Shield, Clock, DollarSign } from 'lucide-react'
 import { StakingStatus } from '@/types'
+import { SUPPORTED_CHAINS } from '@/lib/constants'
+
+// 代币信息映射
+const TOKEN_INFO = {
+  [SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id]: {
+    name: 'Omakase',
+    symbol: 'OMA',
+    description: 'Native ERC20 token with LayerZero Adapter',
+    chainName: 'Ethereum Sepolia'
+  },
+  [SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id]: {
+    name: 'Omakase OFT',
+    symbol: 'OMA',
+    description: 'LayerZero OFT implementation',
+    chainName: 'Arbitrum Sepolia'
+  },
+  [SUPPORTED_CHAINS.BASE_SEPOLIA.id]: {
+    name: 'Omakase OFT',
+    symbol: 'OMA',
+    description: 'LayerZero OFT implementation',
+    chainName: 'Base Sepolia'
+  },
+} as const
+
+function getTokenInfo(chainId: number) {
+  return TOKEN_INFO[chainId as keyof typeof TOKEN_INFO] || {
+    name: 'Unknown Token',
+    symbol: 'TOKEN',
+    description: 'Unknown token',
+    chainName: 'Unknown Network'
+  }
+}
 
 // 简化的统计组件（内联）
 function StakingStats() {
   const { getGlobalStats } = useStaking()
   const globalStats = getGlobalStats()
+  const { address } = useAccount()
+  const chainId = useChainId()
+
+  // 获取当前链的代币信息
+  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
 
   const stats = [
     {
       title: "Total Value Locked",
-      value: `${globalStats.totalStaked} OFT`,
+      value: `${globalStats.totalStaked} ${tokenInfo.symbol}`,
       description: "Total tokens staked in protocol",
       icon: Zap,
       color: "text-blue-600"
@@ -74,6 +111,8 @@ function StakingStats() {
 // 简化的Unstake警告组件（内联）
 function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
   const { cancelUnstake, isLoading } = useStaking()
+  const chainId = useChainId()
+  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN' }
 
   if (stakingStatus.status !== StakingStatus.UNSTAKED) {
     return null
@@ -81,7 +120,7 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
 
   const handleCancelUnstake = async () => {
     const confirmed = window.confirm(
-      'This will stake additional tokens to cancel your unstake request. Continue?'
+      `This will stake additional ${tokenInfo.symbol} tokens to cancel your unstake request. Continue?`
     )
     if (confirmed) {
       await cancelUnstake('0.001')
@@ -96,16 +135,16 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
           <div className="flex-1">
             <h4 className="font-medium text-yellow-800 mb-2">Unstake In Progress</h4>
             <p className="text-sm text-yellow-700 mb-3">
-              {stakingStatus.canWithdraw 
+              {stakingStatus.canWithdraw
                 ? "✅ Lock period ended - You can now withdraw your tokens"
                 : `🕐 Lock period active - ${stakingStatus.unstakeLockRemaining}s remaining`
               }
             </p>
-            
+
             {stakingStatus.isUnstakeCancellable && (
               <div className="mt-3 p-3 bg-white rounded border">
                 <p className="text-sm text-gray-700 mb-2">
-                  💡 <strong>Tip:</strong> You can cancel this unstake by staking additional tokens.
+                  💡 <strong>Tip:</strong> You can cancel this unstake by staking additional {tokenInfo.symbol} tokens.
                 </p>
                 <button
                   onClick={handleCancelUnstake}
@@ -125,9 +164,11 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
 
 export default function Home() {
   const { address } = useAccount()
+  const chainId = useChainId()
   const { getStakingStatus } = useStaking()
-  
+
   const stakingStatus = address ? getStakingStatus() : null
+  const tokenInfo = chainId ? getTokenInfo(chainId) : { symbol: 'TOKEN', chainName: 'Unknown Network' }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
@@ -136,11 +177,16 @@ export default function Home() {
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Cross-Chain Staking System
+              Omakase Protocol
             </h1>
             <p className="text-gray-600 mt-2">
-              Stake OFT tokens across multiple chains and earn USDC rewards
+              Stake OMA tokens across multiple chains and earn USDC rewards
             </p>
+            {address && chainId && (
+              <p className="text-sm text-gray-500 mt-1">
+                Connected: {tokenInfo.chainName} • Token: {tokenInfo.symbol}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <LayerZeroScanIconButton />
@@ -185,6 +231,28 @@ export default function Home() {
                     <p className="text-sm text-gray-600">Stable reward currency</p>
                   </div>
                 </div>
+
+                {/* 支持的代币信息 */}
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="text-center font-medium mb-3">Supported Tokens</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <p className="font-medium text-blue-800">Ethereum Sepolia</p>
+                      <p className="text-sm text-blue-600">Omakase Token (Native ERC20)</p>
+                      <p className="text-xs text-blue-500">via LayerZero Adapter</p>
+                    </div>
+                    <div className="text-center p-3 bg-purple-50 rounded-lg">
+                      <p className="font-medium text-purple-800">Arbitrum Sepolia</p>
+                      <p className="text-sm text-purple-600">Omakase OFT (LayerZero)</p>
+                      <p className="text-xs text-purple-500">Native OFT Implementation</p>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <p className="font-medium text-green-800">Base Sepolia (Hub)</p>
+                      <p className="text-sm text-green-600">Omakase OFT (LayerZero)</p>
+                      <p className="text-xs text-green-500">Central Hub Chain</p>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -204,7 +272,7 @@ export default function Home() {
               <div className="lg:col-span-1">
                 <StakeForm />
               </div>
-              
+
               {/* Right Column - Dashboard */}
               <div className="lg:col-span-2">
                 <StakingDashboard />
@@ -228,9 +296,9 @@ export default function Home() {
                     <ConnectButton />
                   </div>
                   <div className="flex justify-center gap-2 pt-2">
-                    <Badge variant="outline">Ethereum Sepolia</Badge>
-                    <Badge variant="outline">Arbitrum Sepolia</Badge>
-                    <Badge variant="outline">Base Sepolia</Badge>
+                    <Badge variant="outline">Ethereum Sepolia (OMAKASE)</Badge>
+                    <Badge variant="outline">Arbitrum Sepolia (OFT)</Badge>
+                    <Badge variant="outline">Base Sepolia (OFT)</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -266,8 +334,29 @@ export default function Home() {
               </div>
             </div>
           </div>
+
+          {/* 合约地址信息 */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-medium text-gray-700 mb-3">Contract Addresses</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+              <div>
+                <p className="font-medium text-gray-600">Ethereum Sepolia</p>
+                <p className="font-mono text-gray-500">OMAKASE: 0x2dA9...5b2D</p>
+                <p className="font-mono text-gray-500">Adapter: 0x5132...694</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-600">Arbitrum Sepolia</p>
+                <p className="font-mono text-gray-500">OFT: 0x3b6B...065</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-600">Base Sepolia (Hub)</p>
+                <p className="font-mono text-gray-500">OFT: 0x3b6B...065</p>
+              </div>
+            </div>
+          </div>
+
           <p className="text-xs">
-            © 2024 Cross-Chain Staking Protocol. Built with LayerZero and Circle CCTP.
+            © 2025 Omakase Protocol, Built with ❤ in Cannes and Support from LayerZero and Circle
           </p>
         </footer>
       </div>

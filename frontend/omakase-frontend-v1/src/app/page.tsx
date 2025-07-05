@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi'
 import { StakeForm } from '@/components/stakeForm'
 import { StakingDashboard } from '@/components/stakingDashboard'
 import { NetworkSelector } from '@/components/networkSelector'
+import { LayerZeroScanIconButton } from '@/components/LayerZeroScanButton'
 import { useStaking } from '@/hooks/useStaking'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -95,12 +96,12 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
           <div className="flex-1">
             <h4 className="font-medium text-yellow-800 mb-2">Unstake In Progress</h4>
             <p className="text-sm text-yellow-700 mb-3">
-              {stakingStatus.canWithdraw
+              {stakingStatus.canWithdraw 
                 ? "✅ Lock period ended - You can now withdraw your tokens"
                 : `🕐 Lock period active - ${stakingStatus.unstakeLockRemaining}s remaining`
               }
             </p>
-
+            
             {stakingStatus.isUnstakeCancellable && (
               <div className="mt-3 p-3 bg-white rounded border">
                 <p className="text-sm text-gray-700 mb-2">
@@ -125,7 +126,7 @@ function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
 export default function Home() {
   const { address } = useAccount()
   const { getStakingStatus } = useStaking()
-
+  
   const stakingStatus = address ? getStakingStatus() : null
 
   return (
@@ -141,7 +142,8 @@ export default function Home() {
               Stake OFT tokens across multiple chains and earn USDC rewards
             </p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <LayerZeroScanIconButton />
             <NetworkSelector />
             <ConnectButton />
           </div>
@@ -202,7 +204,7 @@ export default function Home() {
               <div className="lg:col-span-1">
                 <StakeForm />
               </div>
-
+              
               {/* Right Column - Dashboard */}
               <div className="lg:col-span-2">
                 <StakingDashboard />
@@ -258,14 +260,14 @@ export default function Home() {
             <div>
               <h4 className="font-medium text-gray-700 mb-2">Security</h4>
               <div className="space-y-1 text-xs">
-                <p>AI-Audited Smart Contracts</p>
+                <p>Audited Smart Contracts</p>
                 <p>Decentralized Protocol</p>
                 <p>Non-custodial Staking</p>
               </div>
             </div>
           </div>
           <p className="text-xs">
-            © 2025 Omasake Protocol. Built with ❤ in Cannes with Support from LayerZero and Circle
+            © 2024 Cross-Chain Staking Protocol. Built with LayerZero and Circle CCTP.
           </p>
         </footer>
       </div>

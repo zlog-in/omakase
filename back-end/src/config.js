@@ -18,6 +18,19 @@ const CONTRACT_ADDRESS = {
   baseSepolia: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
   arbitrumSepolia: "0x1682Ae6375C4E4A97e4B583BC394c861A46D8962",
 };
+
+const USDC_ADDRESS = {
+  sepolia: "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238",
+  baseSepolia: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+  arbitrumSepolia: "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d",
+};
+
+const DOMAIN_ID = {
+  sepolia: 0,
+  baseSepolia: 6,
+  arbitrumSepolia: 3,
+};
+
 const EVENT_NAME = "DepositForBurn";
 
 // Contract ABI - Minimal ABI for Token Messenger
@@ -48,6 +61,8 @@ const ABI = [
 module.exports = {
   RPC_URL,
   CONTRACT_ADDRESS,
+  USDC_ADDRESS,
+  DOMAIN_ID,
   EVENT_NAME,
   ABI,
 };

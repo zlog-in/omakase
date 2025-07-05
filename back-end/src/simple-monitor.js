@@ -22,34 +22,6 @@ async function getBurnMsgHash(network, burnHash) {
   };
 }
 
-async function getAttestation(msgHash) {
-  let attestationResponse = { status: "pending" };
-  while (attestationResponse.status != "complete") {
-    const response = await fetch(
-      `https://iris-api-sandbox.circle.com/attestations/${msgHash}`
-    );
-    attestationResponse = await response.json();
-    console.log("Waiting for attestation...");
-    await new Promise((r) => setTimeout(r, 5000));
-  }
-  console.log(`Attestation: ${attestationResponse.attestation}`);
-  return attestationResponse.attestation;
-}
-
-async function mintUSDC(dstNetwork, msgBytes, attestation) {
-  const provider = new ethers.JsonRpcProvider(rpc[dstNetwork]);
-  const wallet = new ethers.Wallet(process.env.PK, provider);
-  const nonce = await provider.getTransactionCount(wallet.address, "latest");
-  const MessageTransmitter = new ethers.Contract(
-    cctp[dstNetwork]["MessageTransmitter"]["address"],
-    cctp[dstNetwork]["MessageTransmitter"]["abi"],
-    wallet
-  );
-  const mintTx = await MessageTransmitter.receiveMessage(msgBytes, attestation);
-  console.log(`Minted USDC on ${dstNetwork}: ${mintTx.hash}`);
-  return mintTx.hash;
-}
-
 async function monitorEvents(network) {
   try {
     console.log(`🔗 Connecting to ${network}...`);

@@ -1,25 +1,40 @@
 // Import environment variables
-import "dotenv/config";
-import { createWalletClient, http, encodeFunctionData, parseEther } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import {
-  sepolia,
-  baseSepolia,
-  avalancheFuji,
-  arbitrumSepolia,
-} from "viem/chains";
-import axios from "axios";
+require("dotenv").config();
+const { createWalletClient, http, encodeFunctionData } = require("viem");
+const { privateKeyToAccount } = require("viem/accounts");
+const { sepolia, baseSepolia, arbitrumSepolia } = require("viem/chains");
+const axios = require("axios");
+const { USDC_ADDRESS, DOMAIN_ID } = require("./config");
 
 // ============ Configuration Constants ============
 
 // Authentication
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
 const account = privateKeyToAccount(`0x${PRIVATE_KEY}`);
+// Set up wallet clients
+const sepoliaClient = createWalletClient({
+  chain: sepolia,
+  transport: http(),
+  account,
+});
+const baseSepoliaClient = createWalletClient({
+  chain: baseSepolia,
+  transport: http(),
+  account,
+});
+const arbitrumSepoliaClient = createWalletClient({
+  chain: arbitrumSepolia,
+  transport: http(),
+  account,
+});
+
+const CLIENTS = {
+  sepolia: sepoliaClient,
+  baseSepolia: baseSepoliaClient,
+  arbitrumSepolia: arbitrumSepoliaClient,
+};
 
 // Contract Addresses
-const ETHEREUM_SEPOLIA_USDC = "0x1c7d4b196cb0c7b01d743fbc6116a902379c7238";
-const BASE_SEPOLIA_USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
-const ARBITRUM_SEPOLIA_USDC = "0x75faf114eafb1bdbe2f0316df893fd58ce46aa4d";
 const SEPOLIA_TOKEN_MESSENGER = "0x8fe6b999dc680ccfdd5bf7eb0974218be2542daa";
 const SEPOLIA_MESSAGE_TRANSMITTER =
   "0xe737e5cebeeba77efe34d4aa090756590b1ce275";
@@ -36,52 +51,11 @@ const DESTINATION_ADDRESS_BYTES32 = `0x000000000000000000000000${DESTINATION_ADD
 const DESTINATION_CALLER_BYTES32 =
   "0x0000000000000000000000000000000000000000000000000000000000000000"; // Empty bytes32 allows any address to call MessageTransmitterV2.receiveMessage()
 
-// Chain-specific Parameters
-const ETHEREUM_SEPOLIA_DOMAIN = 0; // Source domain ID for Ethereum Sepolia testnet
-const AVALANCHE_FUJI_DOMAIN = 1; // Destination domain ID for Avalanche Fuji testnet
-const ARBITRUM_SEPOLIA_DOMAIN = 3; // Destination domain ID for Arbitrum Sepolia testnet
-const BASE_SEPOLIA_DOMAIN = 6; // Destination domain ID for Base Sepolia testnet
-
-// Set up wallet clients
-const sepoliaClient = createWalletClient({
-  chain: sepolia,
-  transport: http(),
-  account,
-});
-const avalancheClient = createWalletClient({
-  chain: avalancheFuji,
-  transport: http(),
-  account,
-});
-const baseSepoliaClient = createWalletClient({
-  chain: baseSepolia,
-  transport: http(),
-  account,
-});
-const arbitrumSepoliaClient = createWalletClient({
-  chain: arbitrumSepolia,
-  transport: http(),
-  account,
-});
-
-// Helper function to get current nonce
-async function getCurrentNonce(client) {
-  return await client.getTransactionCount({ address: account.address });
-}
-
-// Helper function to wait for transaction confirmation
-async function waitForTransaction(client, hash) {
-  console.log(`Waiting for transaction ${hash} to be confirmed...`);
-  const receipt = await client.waitForTransactionReceipt({ hash });
-  console.log(`Transaction confirmed in block ${receipt.blockNumber}`);
-  return receipt;
-}
-
-async function approveUSDC() {
-  console.log("Approving USDC transfer...");
-
-  const approveTx = await arbitrumSepoliaClient.sendTransaction({
-    to: ARBITRUM_SEPOLIA_USDC,
+async function approveUSDC(srcNetwork) {
+  console.log(`Approving USDC transfer on ${srcNetwork}...`);
+  const srcClient = CLIENTS[srcNetwork];
+  const approveTx = await srcClient.sendTransaction({
+    to: USDC_ADDRESS[srcNetwork],
     data: encodeFunctionData({
       abi: [
         {
@@ -100,17 +74,13 @@ async function approveUSDC() {
     }),
   });
   console.log(`USDC Approval Tx: ${approveTx}`);
-
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
-async function burnUSDC() {
-  console.log("Burning USDC on Arbitrum Sepolia...");
-
-  // const nonce = await getCurrentNonce(baseSepoliaClient);
-  // console.log(`Using nonce: ${nonce}`);
-
-  const burnTx = await arbitrumSepoliaClient.sendTransaction({
+async function burnUSDC(srcNetwork, dstNetwork) {
+  console.log(`Burning USDC on ${srcNetwork}...`);
+  const srcClient = CLIENTS[srcNetwork];
+  const burnTx = await srcClient.sendTransaction({
     to: SEPOLIA_TOKEN_MESSENGER,
     data: encodeFunctionData({
       abi: [
@@ -133,9 +103,9 @@ async function burnUSDC() {
       functionName: "depositForBurn",
       args: [
         AMOUNT,
-        ETHEREUM_SEPOLIA_DOMAIN,
+        DOMAIN_ID[dstNetwork],
         DESTINATION_ADDRESS_BYTES32,
-        ARBITRUM_SEPOLIA_USDC,
+        USDC_ADDRESS[srcNetwork],
         DESTINATION_CALLER_BYTES32,
         maxFee,
         1000, // minFinalityThreshold (1000 or less for Fast Transfer)
@@ -148,9 +118,10 @@ async function burnUSDC() {
   return burnTx;
 }
 
-async function retrieveAttestation(transactionHash) {
+async function retrieveAttestation(srcNetwork, transactionHash) {
   console.log("Retrieving attestation...");
-  const url = `https://iris-api-sandbox.circle.com/v2/messages/${ARBITRUM_SEPOLIA_DOMAIN}?transactionHash=${transactionHash}`;
+  const domain = DOMAIN_ID[srcNetwork];
+  const url = `https://iris-api-sandbox.circle.com/v2/messages/${domain}?transactionHash=${transactionHash}`;
   while (true) {
     try {
       const response = await axios.get(url);
@@ -170,9 +141,10 @@ async function retrieveAttestation(transactionHash) {
   }
 }
 
-async function mintUSDC(attestation) {
-  console.log("Minting USDC on Sepolia...");
-  const mintTx = await sepoliaClient.sendTransaction({
+async function mintUSDC(dstNetwork, attestation) {
+  console.log(`Minting USDC on ${dstNetwork}...`);
+  const dstClient = CLIENTS[dstNetwork];
+  const mintTx = await dstClient.sendTransaction({
     to: SEPOLIA_MESSAGE_TRANSMITTER,
     data: encodeFunctionData({
       abi: [
@@ -195,12 +167,12 @@ async function mintUSDC(attestation) {
   await new Promise((resolve) => setTimeout(resolve, 5000));
 }
 
-async function main() {
-  await approveUSDC();
-  const burnTx = await burnUSDC();
-  const attestation = await retrieveAttestation(burnTx);
-  await mintUSDC(attestation);
+async function main(srcNetwork, dstNetwork) {
+  await approveUSDC(srcNetwork);
+  const burnTx = await burnUSDC(srcNetwork, dstNetwork);
+  const attestation = await retrieveAttestation(srcNetwork, burnTx);
+  await mintUSDC(dstNetwork, attestation);
   console.log("USDC transfer completed!");
 }
 
-main().catch(console.error);
+main("arbitrumSepolia", "baseSepolia").catch(console.error);

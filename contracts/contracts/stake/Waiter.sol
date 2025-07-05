@@ -20,6 +20,7 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
     using SafeERC20 for IERC20;
     using OptionsBuilder for bytes;
     using OFTComposeMsgCodec for bytes;
+    using LzMessageLib for bytes;
 
     address public backend;
     uint256 public hubChainId;
@@ -36,8 +37,8 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(stakeMsg, _amount);
     }
 
-    function quoteStake(uint256 _amount) public view returns (uint256) {
-        bytes memory stakePayload = LzMessageLib.encodeStakePayload(msg.sender, _amount);
+    function quoteStake(address _staker, uint256 _amount) public view returns (uint256) {
+        bytes memory stakePayload = LzMessageLib.encodeStakePayload(_staker, _amount);
         bytes memory stakeMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.STAKE), stakePayload);
         return _quoteMsg(stakeMsg, _amount);
     }
@@ -48,8 +49,8 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(unstakeMsg, 0);
     }
 
-    function quoteUnstake() public view returns (uint256) {
-        bytes memory unstakePayload = LzMessageLib.encodeUnstakePayload(msg.sender);
+    function quoteUnstake(address _unstaker) public view returns (uint256) {
+        bytes memory unstakePayload = LzMessageLib.encodeUnstakePayload(_unstaker);
         bytes memory unstakeMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.UNSTAKE), unstakePayload);
         return _quoteMsg(unstakeMsg, 0);
     }
@@ -61,8 +62,8 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(withdrawMsg, 0);
     }
 
-    function quoteWithdraw() public view returns (uint256) {
-        bytes memory withdrawPayload = LzMessageLib.encodeWithdrawPayload(msg.sender);
+    function quoteWithdraw(address _withdrawer) public view returns (uint256) {
+        bytes memory withdrawPayload = LzMessageLib.encodeWithdrawPayload(_withdrawer);
         bytes memory withdrawMsg =
             LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.WITHDRAW), withdrawPayload);
         return _quoteMsg(withdrawMsg, 0);
@@ -74,8 +75,8 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         _sendMsg(claimMsg, 0);
     }
 
-    function quoteClaim() public view returns (uint256) {
-        bytes memory claimPayload = LzMessageLib.encodeClaimPayload(msg.sender);
+    function quoteClaim(address _claimer) public view returns (uint256) {
+        bytes memory claimPayload = LzMessageLib.encodeClaimPayload(_claimer);
         bytes memory claimMsg = LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.CLAIM), claimPayload);
         return _quoteMsg(claimMsg, 0);
     }
@@ -88,7 +89,18 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         address, /*_executor*/
         bytes calldata /*_extraData*/
     ) public payable override {
-        // TODO: Implement
+        bytes memory composeMsg = _message.composeMsg();
+        uint32 srcEid = _message.srcEid();
+        address remoteSender = OFTComposeMsgCodec.bytes32ToAddress(_message.composeFrom());
+        _authorizeComposeMsgSender(msg.sender, _from, srcEid, remoteSender);
+        LzMessageLib.LzMessage memory lzMessage = composeMsg.decodeLzMessage();
+        if (lzMessage.payloadType == uint8(LzMessageLib.PayloadTypes.WITHDRAW_FINISH)) {
+            LzMessageLib.WithdrawFinishPayload memory withdrawPayload =
+                LzMessageLib.decodeWithdrawFinishPayload(lzMessage.payload);
+            _withdrawFinish(withdrawPayload.staker, withdrawPayload.amount);
+        } else {
+            revert("Waiter: Invalid payload type");
+        }
     }
 
     // =============================== Admin Functions ===============================
@@ -142,5 +154,11 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         });
         MessagingFee memory fee = IOFT(oft).quoteSend(sendParam, false);
         return fee.nativeFee;
+    }
+
+    function _withdrawFinish(address _staker, uint256 _amount) internal {
+        IERC20 token = IERC20(IOFT(oft).token());
+        token.safeTransfer(_staker, _amount);
+        emit WithdrawFinished(_staker, _amount);
     }
 }

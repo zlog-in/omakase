@@ -61,7 +61,7 @@ contract Chef is StakeUpgradeable, IChef {
         uint256 chainId = eid2ChainId[srcEid];
         if (lzMessage.payloadType == uint8(LzMessageLib.PayloadTypes.STAKE)) {
             LzMessageLib.StakePayload memory stakePayload = LzMessageLib.decodeStakePayload(lzMessage.payload);
-            _stake(stakePayload.staker, stakePayload.amount);
+            _stake(chainId, stakePayload.staker, stakePayload.amount);
         } else if (lzMessage.payloadType == uint8(LzMessageLib.PayloadTypes.UNSTAKE)) {
             LzMessageLib.UnstakePayload memory unstakePayload = LzMessageLib.decodeUnstakePayload(lzMessage.payload);
             _unstake(chainId, unstakePayload.staker);
@@ -78,6 +78,8 @@ contract Chef is StakeUpgradeable, IChef {
         } else if (lzMessage.payloadType == uint8(LzMessageLib.PayloadTypes.CLAIM)) {
             LzMessageLib.ClaimPayload memory claimPayload = LzMessageLib.decodeClaimPayload(lzMessage.payload);
             _claim(chainId, claimPayload.staker);
+        } else {
+            revert("Chef: Invalid payload type");
         }
     }
 

@@ -1,7 +1,7 @@
 import { useReadContract, useWriteContract, useAccount } from 'wagmi'
 import { useEffect } from 'react'
 import { Address } from 'viem'
-import { WAITER_ABI, CHEF_ABI, OFT_ABI } from '@/lib/contracts'
+import { WAITER_ABI, CHEF_ABI, OFT_ABI, NATIVE_ERC20_ABI } from '@/lib/contracts'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
 import { ContractStakeInfo } from '@/types'
 import toast from 'react-hot-toast'
@@ -236,17 +236,17 @@ export function useChefReadContract() {
     const transformedResult = {
       ...result,
       data: result.data ? {
-        stakeAmount: (result.data as readonly [bigint, bigint, bigint, bigint])[0],
-        stakeReward: (result.data as readonly [bigint, bigint, bigint, bigint])[1],
-        lastStakeTime: (result.data as readonly [bigint, bigint, bigint, bigint])[2],
-        lastUnstakeTime: (result.data as readonly [bigint, bigint, bigint, bigint])[3],
+        stakeAmount: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[0],
+        stakeReward: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[1],
+        lastStakeTime: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[2],
+        lastUnstakeTime: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[3],
       } as ContractStakeInfo : undefined
     }
 
     return transformedResult
   }
 
-  // 获取实时奖励 - 添加错误恢复机制
+  // 获取实时奖励
   const getUserReward = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
@@ -255,13 +255,6 @@ export function useChefReadContract() {
       args: [staker],
       query: {
         enabled: !!staker && !!contractAddress,
-        retry: (failureCount, error) => {
-          // 如果是ABI不匹配错误，不要重试
-          if (error?.message?.includes('function getTotalStakedAmount')) {
-            return false
-          }
-          return failureCount < 3
-        },
       }
     })
 
@@ -271,31 +264,8 @@ export function useChefReadContract() {
         console.error('Contract Address:', contractAddress)
         console.error('Environment Variable:', process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS)
         console.error('Error Details:', result.error)
-        
-        // 检查是否是合约不存在的错误
-        if (result.error.message && result.error.message.includes('function getTotalStakedAmount')) {
-          console.error('🚨 Contract ABI mismatch! The contract at this address may not be the Chef contract.')
-          console.error('💡 The contract seems to have getTotalStakedAmount but not getUserReward function.')
-          console.error('💡 This suggests the contract ABI or address is incorrect.')
-          console.error('💡 Please verify:')
-          console.error('   1. NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS points to the correct Chef contract')
-          console.error('   2. The deployed contract has the getUserReward function')
-          console.error('   3. The CHEF_ABI matches the deployed contract')
-          console.error('🔧 Falling back to mock data to prevent app crash')
-        }
       }
     }, [result.error, staker, contractAddress])
-
-    // 如果有ABI不匹配错误，返回模拟数据以防止应用崩溃
-    if (result.error?.message?.includes('function getTotalStakedAmount')) {
-      return {
-        ...result,
-        data: 0n, // 返回0作为默认奖励
-        error: null, // 清除错误以防止界面显示错误
-        isLoading: false,
-        isError: false,
-      }
-    }
 
     return result
   }
@@ -358,8 +328,26 @@ export function useChefReadContract() {
     return true
   }
 
+  // 获取总质押金额（新ABI版本）
+  const getTotalStakedAmountNew = () => {
+    const result = useReadContract({
+      address: contractAddress,
+      abi: CHEF_ABI,
+      functionName: 'totalStakedAmount',
+    })
+
+    useEffect(() => {
+      if (result.error) {
+        console.error('Failed to fetch total staked amount (new):', result.error)
+      }
+    }, [result.error])
+
+    return result
+  }
+
   return {
     getTotalStakedAmount,
+    getTotalStakedAmountNew,
     getUserStakeInfo,
     getUserReward,
     getUserUnstakeLockTime,
@@ -374,7 +362,7 @@ export function useChefWriteContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
   const { writeContract } = useWriteContract()
 
-  const sendReward = async (chainId: bigint, message: string, attestation: string) => {
+  const sendReward = async (domainId: number, message: string, attestation: string) => {
     try {
       toast.loading('Initiating reward transfer...', { id: 'send-reward-tx' })
 
@@ -382,7 +370,7 @@ export function useChefWriteContract() {
         address: contractAddress,
         abi: CHEF_ABI,
         functionName: 'sendReward',
-        args: [chainId, message, attestation],
+        args: [domainId, message as `0x${string}`, attestation as `0x${string}`],
         chainId: 84532 as SupportedChainId,
       })
 
@@ -419,7 +407,23 @@ export function useOFTContract(chainId: number) {
     }
   }
 
+  // 根据链ID选择合适的ABI
+  const getContractABI = (chainId: number) => {
+    switch (chainId) {
+      case SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id:
+        // Ethereum Sepolia使用原生ERC20合约ABI
+        return NATIVE_ERC20_ABI
+      case SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id:
+      case SUPPORTED_CHAINS.BASE_SEPOLIA.id:
+        // Arbitrum和Base Sepolia使用OFT合约ABI
+        return OFT_ABI
+      default:
+        return OFT_ABI
+    }
+  }
+
   const contractAddress = getOFTAddress(chainId)
+  const contractABI = getContractABI(chainId)
 
   const approve = async (spender: Address, amount: bigint) => {
     if (!contractAddress) {
@@ -433,7 +437,7 @@ export function useOFTContract(chainId: number) {
 
       const result = await writeContract({
         address: contractAddress,
-        abi: OFT_ABI,
+        abi: contractABI,
         functionName: 'approve',
         args: [spender, amount],
         chainId: chainId as SupportedChainId,
@@ -452,7 +456,7 @@ export function useOFTContract(chainId: number) {
   const getTokenBalance = (account: Address) => {
     const result = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'balanceOf',
       args: [account],
       query: {
@@ -473,7 +477,7 @@ export function useOFTContract(chainId: number) {
   const getTokenAllowance = (owner: Address, spender: Address) => {
     const result = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'allowance',
       args: [owner, spender],
       query: {
@@ -488,7 +492,7 @@ export function useOFTContract(chainId: number) {
   const getTokenInfo = () => {
     const name = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'name',
       query: {
         enabled: !!contractAddress,
@@ -497,7 +501,7 @@ export function useOFTContract(chainId: number) {
 
     const symbol = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'symbol',
       query: {
         enabled: !!contractAddress,
@@ -506,19 +510,22 @@ export function useOFTContract(chainId: number) {
 
     const decimals = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'decimals',
       query: {
         enabled: !!contractAddress,
       }
     })
 
+    // 只有OFT合约才有sharedDecimals，原生ERC20没有
+    const isOFTContract = chainId === SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id || chainId === SUPPORTED_CHAINS.BASE_SEPOLIA.id
+    
     const sharedDecimals = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
-      abi: OFT_ABI,
+      abi: contractABI,
       functionName: 'sharedDecimals',
       query: {
-        enabled: !!contractAddress,
+        enabled: !!contractAddress && isOFTContract,
       }
     })
 
@@ -526,9 +533,9 @@ export function useOFTContract(chainId: number) {
       name: name.data as string | undefined,
       symbol: symbol.data as string | undefined,
       decimals: decimals.data as number | undefined,
-      sharedDecimals: sharedDecimals.data as number | undefined,
-      isLoading: name.isLoading || symbol.isLoading || decimals.isLoading || sharedDecimals.isLoading,
-      error: name.error || symbol.error || decimals.error || sharedDecimals.error
+      sharedDecimals: isOFTContract ? (sharedDecimals.data as number | undefined) : (decimals.data as number | undefined),
+      isLoading: name.isLoading || symbol.isLoading || decimals.isLoading || (isOFTContract && sharedDecimals.isLoading),
+      error: name.error || symbol.error || decimals.error || (isOFTContract && sharedDecimals.error)
     }
   }
 
@@ -577,7 +584,7 @@ export function showTransactionSuccess(txHash: string, chainId: number) {
 }
 
 // 合约事件监听Hook
-export function useStakingEvents(userAddress?: Address) {
+export function useStakingEvents(_userAddress?: Address) {
   // 这里可以添加事件监听逻辑
   // 目前先返回空实现，后续可以扩展
   return {

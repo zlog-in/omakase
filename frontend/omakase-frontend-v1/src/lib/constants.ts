@@ -4,8 +4,8 @@ export const SUPPORTED_CHAINS = {
         name: 'Ethereum Sepolia',
         rpcUrl: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC,
         waiterAddress: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_WAITER_ADDRESS,
-        // 更新：使用实际的合约地址
-        oftAddress: '0x2dA943A5E008b9A85aA0E80F0d7d8d53a4945b2D', // Omakase (原生代币)
+        // 使用环境变量配置的合约地址
+        oftAddress: process.env.NEXT_PUBLIC_ETHEREUM_SEPOLIA_OFT_ADDRESS, // Omakase (原生代币)
         adapterAddress: '0x5132f64f01140C4EfCdEbfcFe769c69E023cd694', // Adapter合约
         layerZeroEndpointId: 40161,
     },
@@ -14,8 +14,8 @@ export const SUPPORTED_CHAINS = {
         name: 'Arbitrum Sepolia',
         rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC,
         waiterAddress: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_WAITER_ADDRESS,
-        // 更新：使用实际的OFT地址
-        oftAddress: '0x3b6Be820c586B7235e19c7956e9408879A0F6065', // OFT合约
+        // 使用环境变量配置的OFT地址
+        oftAddress: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_OFT_ADDRESS, // OFT合约
         layerZeroEndpointId: 40231,
     },
     BASE_SEPOLIA: {
@@ -23,8 +23,8 @@ export const SUPPORTED_CHAINS = {
         name: 'Base Sepolia',
         rpcUrl: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC,
         chefAddress: process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS,
-        // 更新：使用实际的OFT地址
-        oftAddress: '0x3b6Be820c586B7235e19c7956e9408879A0F6065', // OFT合约
+        // 使用环境变量配置的OFT地址
+        oftAddress: process.env.NEXT_PUBLIC_BASE_SEPOLIA_OFT_ADDRESS, // OFT合约
         layerZeroEndpointId: 40245,
     },
 };

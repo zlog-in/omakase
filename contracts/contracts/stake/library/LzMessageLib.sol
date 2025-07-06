@@ -43,6 +43,11 @@ library LzMessageLib {
         address staker;
     }
 
+    struct ClaimFinishPayload {
+        bytes message;
+        bytes attestation;
+    }
+
     function encodeLzMessage(uint8 _payloadType, bytes memory _payload) internal pure returns (bytes memory) {
         LzMessage memory lzMessage = LzMessage({payloadType: _payloadType, payload: _payload});
         return abi.encode(lzMessage);
@@ -95,5 +100,18 @@ library LzMessageLib {
     function decodeClaimPayload(bytes memory _payload) internal pure returns (ClaimPayload memory) {
         (address staker) = abi.decode(_payload, (address));
         return ClaimPayload({staker: staker});
+    }
+
+    function encodeClaimFinishPayload(bytes memory _message, bytes memory _attestation)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encode(_message, _attestation);
+    }
+
+    function decodeClaimFinishPayload(bytes memory _payload) internal pure returns (ClaimFinishPayload memory) {
+        (bytes memory message, bytes memory attestation) = abi.decode(_payload, (bytes, bytes));
+        return ClaimFinishPayload({message: message, attestation: attestation});
     }
 }

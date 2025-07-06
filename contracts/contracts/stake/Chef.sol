@@ -28,7 +28,12 @@ contract Chef is StakeUpgradeable, IChef {
 
     // =============================== Backend Functions ===============================
     function sendReward(uint32 _domainId, bytes calldata _message, bytes calldata _attestation) external onlyBackend {
-        _sendReward(_domainId, _message, _attestation);
+        uint256 chainId = domainId2ChainId[_domainId];
+        address waiter = waiters[chainId];
+        bytes memory claimFinishPyload = LzMessageLib.encodeClaimFinishPayload(_message, _attestation);
+        bytes memory claimFinishMsg =
+            LzMessageLib.encodeLzMessage(uint8(LzMessageLib.PayloadTypes.CLAIM_FINISH), claimFinishPyload);
+        _sendMsg(chainId, waiter, claimFinishMsg, 0);
     }
 
     function burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) public onlyBackend {

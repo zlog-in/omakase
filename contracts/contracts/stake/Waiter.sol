@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BaseContractUpgradeable, IERC20, SafeERC20} from "./base/BaseContractUpgradeable.sol";
+import {IERC20, SafeERC20} from "./base/BaseContractUpgradeable.sol";
 import {OptionsBuilder} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oapp/libs/OptionsBuilder.sol";
 import {
     IOFT,
@@ -16,7 +16,7 @@ import {LzMessageLib} from "./library/LzMessageLib.sol";
 import {IWaiter} from "./interfaces/IWaiter.sol";
 import {CCTPHandlerUpgradeable} from "./base/CCTPHandlerUpgradeable.sol";
 
-contract Waiter is BaseContractUpgradeable, IWaiter {
+contract Waiter is CCTPHandlerUpgradeable, IWaiter {
     using SafeERC20 for IERC20;
     using OptionsBuilder for bytes;
     using OFTComposeMsgCodec for bytes;
@@ -98,6 +98,10 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
             LzMessageLib.WithdrawFinishPayload memory withdrawPayload =
                 LzMessageLib.decodeWithdrawFinishPayload(lzMessage.payload);
             _withdrawFinish(withdrawPayload.staker, withdrawPayload.amount);
+        } else if (lzMessage.payloadType == uint8(LzMessageLib.PayloadTypes.CLAIM_FINISH)) {
+            LzMessageLib.ClaimFinishPayload memory claimFinishPayload =
+                LzMessageLib.decodeClaimFinishPayload(lzMessage.payload);
+            _claimFinish(claimFinishPayload.message, claimFinishPayload.attestation);
         } else {
             revert("Waiter: Invalid payload type");
         }
@@ -160,5 +164,9 @@ contract Waiter is BaseContractUpgradeable, IWaiter {
         IERC20 token = IERC20(IOFT(oft).token());
         token.safeTransfer(_staker, _amount);
         emit WithdrawFinished(_staker, _amount);
+    }
+
+    function _claimFinish(bytes memory _message, bytes memory _attestation) internal {
+        _receiveReward(_message, _attestation);
     }
 }

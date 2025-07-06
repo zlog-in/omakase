@@ -2,22 +2,28 @@
 pragma solidity ^0.8.20;
 
 import {ITokenMessenger} from "../interfaces/cctp/ITokenMessenger.sol";
+import {IMessageTransmitter} from "../interfaces/cctp/IMessageTransmitter.sol";
 import {BaseContractUpgradeable} from "./BaseContractUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
     event BurnUSDC(uint256 indexed chainId, uint32 indexed domainId, address indexed mintRecipient, uint256 amount);
-    event MintUSDC(uint256 indexed chainId, uint32 indexed domainId, address indexed mintRecipient, uint256 amount);
+    event MintUSDC();
 
     ITokenMessenger public tokenMessager;
+    IMessageTransmitter public messageTransmitter;
     mapping(uint256 => uint32) public chainId2DomainId;
     mapping(uint32 => uint256) public domainId2ChainId;
     address public usdc;
 
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 
     function setTokenMessager(address _tokenMessager) external onlyOwner {
         tokenMessager = ITokenMessenger(_tokenMessager);
+    }
+
+    function setMessageTransmitter(address _messageTransmitter) external onlyOwner {
+        messageTransmitter = IMessageTransmitter(_messageTransmitter);
     }
 
     function setCCTPDomainId(uint256 _chainId, uint32 _domainId) external onlyOwner {
@@ -30,11 +36,11 @@ abstract contract CCTPHandlerUpgradeable is BaseContractUpgradeable {
     }
 
     // =============================== CCTP Functions ===============================
-    function _sendReward(uint32 _domainId, bytes calldata _message, bytes calldata _attestation)
-        internal
-        whenNotPaused
-    {
-        // TODO: Implement
+    function _sendReward(uint32 _domainId, bytes memory _message, bytes memory _attestation) internal whenNotPaused {}
+
+    function _receiveReward(bytes memory _message, bytes memory _attestation) internal {
+        IMessageTransmitter(messageTransmitter).receiveMessage(_message, _attestation);
+        emit MintUSDC();
     }
 
     function _burnUSDC(uint256 _chainId, address _mintRecipient, uint256 _amount) internal whenNotPaused {

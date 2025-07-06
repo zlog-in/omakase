@@ -130,7 +130,6 @@ task(
         try {
             const contractAddress = (await loadContractAddress(env, hre.network.name, contractName)) as string
             const contract = await hre.ethers.getContractAt(contractName, contractAddress, signer)
-
             const lzConfig = getLzConfig(hre.network.name)
             const oftName = oftContractName(hre.network.name)
             const oftAddress = (await loadContractAddress(env, hre.network.name, oftName)) as string
@@ -145,7 +144,6 @@ task(
             } else {
                 console.log(`OFT address on ${contractName} already set to ${oftAddress} and set as local composeMsgSender`)
             }
-
             
             if (contractName === 'Waiter') {
                 const hubChainLzConfig = getLzConfig('basesepolia')
@@ -203,12 +201,23 @@ task(
                 // } else {
                 //     console.log(`USDC already set to ${cctpAddress.USDC} on ${contractName}`)
                 // }
+
+                const cctpAddress = CCTP_ADDRESS['basesepolia']
+                const baseDomainId = await contract.chainId2DomainId(hubChainLzConfig.chainId)
+                if (Number(baseDomainId) !== cctpAddress.domain) {
+                    const txSetBaseDomainId = await contract.setCCTPDomainId(hubChainLzConfig.chainId, cctpAddress.domain)
+                    await txSetBaseDomainId.wait()
+                    console.log(`Set base domain id to ${cctpAddress.domain} on ${contractName}`)
+                } else {
+                    console.log(`Base domain id already set to ${cctpAddress.domain} on ${contractName}`)
+                }
                 
             } else if (contractName === 'Chef') {
                 const NETWORKS = TEST_NETWORKS
                 for (const network of NETWORKS) {
                     if (network !== hre.network.name) {
                         const lzConfig = getLzConfig(network)
+                        const cctpAddress = CCTP_ADDRESS[network as keyof typeof CCTP_ADDRESS]
                         const eidOnContract = await contract.chainId2Eid(lzConfig.chainId)
                         const chainIdOnContract = await contract.eid2ChainId(lzConfig.endpointId)
                         const waiterOnContract = await contract.waiters(lzConfig.chainId)
@@ -239,29 +248,18 @@ task(
                             console.log(`Waiter address already set to ${waiterAddress} on ${contractName}`)
                         }
 
+                        const chainIdOnContractForDomain = await contract.domainId2ChainId(cctpAddress.domain)
+                        if (Number(chainIdOnContractForDomain) !== lzConfig.chainId) {
+                            const txSetBaseDomainId = await contract.setCCTPDomainId(lzConfig.chainId, cctpAddress.domain)
+                            await txSetBaseDomainId.wait()
+                            console.log(`Set base domain id to ${cctpAddress.domain} on ${contractName}`)
+                        } else {
+                            console.log(`Domain id for ${network} already set to ${cctpAddress.domain} on ${contractName}`)
+                        }
                         
                 }
                  
                 } 
-
-                const cctpAddress = CCTP_ADDRESS['basesepolia']
-                const tokenMessagerOnContract = await contract.tokenMessager()
-                if (tokenMessagerOnContract.toLowerCase() !== cctpAddress.TokenMessager.toLowerCase() ) {
-                    const txSetTokenMessager = await contract.setTokenMessager(cctpAddress.TokenMessager)
-                    await txSetTokenMessager.wait()
-                    console.log(`Set token messager to ${cctpAddress.TokenMessager} on ${contractName}`)
-                } else {
-                    console.log(`Token messager already set to ${cctpAddress.TokenMessager} on ${contractName}`)
-                }
-
-                const usdcAddressOnContract = await contract.usdc()
-                if (usdcAddressOnContract.toLowerCase() !== cctpAddress.USDC.toLowerCase()) {
-                    const txSetUSDC = await contract.setUSDC(cctpAddress.USDC)
-                    await txSetUSDC.wait()
-                    console.log(`Set usdc to ${cctpAddress.USDC} on ${contractName}`)
-                } else {
-                    console.log(`USDC already set to ${cctpAddress.USDC} on ${contractName}`)
-                }
 
                 const backendAddress = BACK_END_ADDRESS
                 const backendOnContract = await contract.backend()
@@ -274,6 +272,34 @@ task(
                 }
             }else {
                 throw new Error(`Contract ${contractName} not found`)
+            }
+
+            const cctpAddress = CCTP_ADDRESS['basesepolia']
+            const tokenMessagerOnContract = await contract.tokenMessager()
+            if (tokenMessagerOnContract.toLowerCase() !== cctpAddress.TokenMessager.toLowerCase() ) {
+                const txSetTokenMessager = await contract.setTokenMessager(cctpAddress.TokenMessager)
+                await txSetTokenMessager.wait()
+                console.log(`Set token messager to ${cctpAddress.TokenMessager} on ${contractName}`)
+            } else {
+                console.log(`Token messager already set to ${cctpAddress.TokenMessager} on ${contractName}`)
+            }
+
+            const messageTransmitterOnContract = await contract.messageTransmitter()
+            if (messageTransmitterOnContract.toLowerCase() !== cctpAddress.MessageTransmitter.toLowerCase() ) {
+                const txSetMessageTransmitter = await contract.setMessageTransmitter(cctpAddress.MessageTransmitter)
+                await txSetMessageTransmitter.wait()
+                console.log(`Set message transmitter to ${cctpAddress.MessageTransmitter} on ${contractName}`)
+            } else {
+                console.log(`Message transmitter already set to ${cctpAddress.MessageTransmitter} on ${contractName}`)
+            }
+
+            const usdcAddressOnContract = await contract.usdc()
+            if (usdcAddressOnContract.toLowerCase() !== cctpAddress.USDC.toLowerCase()) {
+                const txSetUSDC = await contract.setUSDC(cctpAddress.USDC)
+                await txSetUSDC.wait()
+                console.log(`Set usdc to ${cctpAddress.USDC} on ${contractName}`)
+            } else {
+                console.log(`USDC already set to ${cctpAddress.USDC} on ${contractName}`)
             }
 
             console.log(`Initialized ${contractName} on ${hre.network.name} for ${env}`)
@@ -693,6 +719,7 @@ task('hack:stake', 'Send stakes to a specific address on a specific network')
 
             const approveTx = await erc20Contract.approve(localContractAddress, tokenAmount, {
                 nonce: nonce++,
+                gasPrice: 25000000000,
             })
             await approveTx.wait()
             console.log(
@@ -746,6 +773,7 @@ task('hack:request', 'Send unstakes to a specific address on a specific network'
                 const unstakeTx = await waiterContract.unstake( {
                 value: lzFee,
                 nonce: nonce++,
+                gasPrice: 25000000000,
                 })
                 console.log(`Unstaking tokens from ${fromNetwork} to ${toNetwork} with tx hash ${unstakeTx.hash}`)
             } else if (taskArgs.requestType === 'withdraw') {
@@ -753,6 +781,7 @@ task('hack:request', 'Send unstakes to a specific address on a specific network'
                 const withdrawTx = await waiterContract.withdraw( {
                     value: lzFee,
                     nonce: nonce++,
+                    gasPrice: 25000000000,
                 })
                 console.log(`Withdrawing tokens from ${fromNetwork} to ${toNetwork} with tx hash ${withdrawTx.hash}`)
             } else if (taskArgs.requestType === 'claim') {
@@ -760,6 +789,7 @@ task('hack:request', 'Send unstakes to a specific address on a specific network'
                 const claimTx = await waiterContract.claim( {
                     value: lzFee,
                     nonce: nonce++,
+                    gasPrice: 25000000000,
                 })
                 console.log(`Claiming tokens from ${fromNetwork} to ${toNetwork} with tx hash ${claimTx.hash}`)
             } else {

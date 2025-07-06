@@ -94,7 +94,7 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
         return stakeInfo.stakeReward
             + (
                 stakeInfo.lastUnstakeTime != 0
-                    ? stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
+                    ? stakeInfo.stakeAmount * STAKE_REWARD_RATE * (stakeInfo.lastUnstakeTime - stakeInfo.lastStakeTime)
                         / (10 ** IOFT(oft).sharedDecimals())
                     : 0
             );

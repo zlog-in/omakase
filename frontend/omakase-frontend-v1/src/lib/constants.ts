@@ -34,7 +34,7 @@ export const HUB_CHAIN_ID = SUPPORTED_CHAINS.BASE_SEPOLIA.id;
 // 更新质押常量 - 匹配合约实现
 export const STAKING_CONSTANTS = {
     UNSTAKE_PERIOD: 15, // 15 seconds as defined in contract
-    STAKE_REWARD_RATE: 100, // 100 BP per second
+    STAKE_REWARD_RATE: 1, // 1 BP per second (correct rate from contract)
     USDC_DECIMALS: 6, // USDC has 6 decimals
     REWARD_DISPLAY_DECIMALS: 4, // Display precision for rewards
 };

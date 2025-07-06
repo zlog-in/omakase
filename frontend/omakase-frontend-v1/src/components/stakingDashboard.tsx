@@ -118,6 +118,9 @@ export function StakingDashboard() {
     }
 
     if (stakingStatus.status === StakingStatus.NOT_STAKED) {
+        // 检查是否有可以claim的奖励（用户可能已经完成了withdraw但还有奖励）
+        const hasClaimableRewards = parseFloat(stakingStatus.rewards) > 0 || parseFloat(realtimeRewards.toString()) > 0
+        
         return (
             <div className="space-y-4">
                 {/* Chef Contract Status for New Users */}
@@ -145,9 +148,43 @@ export function StakingDashboard() {
                     )}
                 </Card>
 
+                {/* 显示可以claim的奖励（如果有的话） */}
+                {hasClaimableRewards && (
+                    <Card className="border-l-4 border-l-green-500">
+                        <CardHeader>
+                            <CardTitle className="text-lg flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-green-600" />
+                                Claimable Rewards Available
+                            </CardTitle>
+                            <CardDescription>
+                                You have rewards available to claim from your previous staking activity.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Available Rewards</p>
+                                    <p className="text-xl font-bold text-green-600">{stakingStatus.rewards} USDC</p>
+                                </div>
+                                <Button
+                                    variant="default"
+                                    onClick={() => claimReward()}
+                                    disabled={isLoading || !canClaim()}
+                                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                    <Zap className="w-4 h-4" />
+                                    Claim Rewards
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 <Card>
                     <CardContent className="text-center py-8">
-                        <p className="text-gray-500 mb-4">No active staking position found</p>
+                        <p className="text-gray-500 mb-4">
+                            {hasClaimableRewards ? 'No active staking position - but you have rewards to claim!' : 'No active staking position found'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                             Start staking to earn USDC rewards automatically!
                         </p>
@@ -179,7 +216,7 @@ export function StakingDashboard() {
                     ? "Ready to withdraw your tokens"
                     : "Unstake initiated - waiting for unlock period"
             case StakingStatus.WITHDRAWN:
-                return "Tokens have been withdrawn"
+                return "Tokens have been withdrawn - you can still claim any remaining rewards"
             default:
                 return ""
         }
@@ -302,6 +339,23 @@ export function StakingDashboard() {
                         </div>
                     )}
 
+                    {/* Withdrawn状态特殊显示 - 突出显示可以claim rewards */}
+                    {stakingStatus.status === StakingStatus.WITHDRAWN && (
+                        <div className="p-4 border rounded-lg bg-blue-50 border-blue-200">
+                            <div className="flex items-start gap-3">
+                                <Zap className="w-5 h-5 mt-0.5 text-blue-600" />
+                                <div className="flex-1">
+                                    <h4 className="font-medium text-blue-800">
+                                        Tokens Successfully Withdrawn!
+                                    </h4>
+                                    <p className="text-sm mt-1 text-blue-700">
+                                        ✅ Your {tokenInfo.symbol} tokens have been withdrawn. You can still claim any remaining rewards.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* 操作按钮 */}
                     <div className="flex flex-wrap gap-3">
                         {stakingStatus.status === StakingStatus.ACTIVE && (
@@ -352,7 +406,7 @@ export function StakingDashboard() {
                             </Button>
                         )}
 
-                        {parseFloat(stakingStatus.rewards) > 0 && (
+                        {(parseFloat(stakingStatus.rewards) > 0 || parseFloat(realtimeRewards.toString()) > 0) && (
                             <Button
                                 variant="secondary"
                                 onClick={() => claimReward()}

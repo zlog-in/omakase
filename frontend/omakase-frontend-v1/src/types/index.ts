@@ -333,7 +333,7 @@ export interface StakeFormData {
 // 合约常量类型
 export interface StakingConstants {
   UNSTAKE_PERIOD: number       // 15 seconds
-  STAKE_REWARD_RATE: number    // 100 BP per second
+  STAKE_REWARD_RATE: number    // 1 BP per second (corrected from contract)
   USDC_DECIMALS: number        // 6
   REWARD_DISPLAY_DECIMALS: number  // 4
 }

@@ -146,8 +146,17 @@ export function calculateStakeReward(
 ): bigint {
     if (stakeAmount === 0n || durationSeconds <= 0) return 0n
 
-    // 根据合约逻辑: stakeAmount * STAKE_REWARD_RATE * duration / sharedDecimals
-    return (stakeAmount * BigInt(rewardRate) * BigInt(durationSeconds)) / BigInt(10 ** oftSharedDecimals)
+    // 根据合约逻辑: stakeAmount * STAKE_REWARD_RATE * duration / 10000 (BP calculation)
+    // rewardRate是基点(BP)，需要除以10000来转换为实际比例
+    // 然后根据decimals调整精度
+    const rewardInTokenUnits = (stakeAmount * BigInt(rewardRate) * BigInt(durationSeconds)) / BigInt(10000)
+    
+    // 转换为USDC精度 (6 decimals)，从OFT的sharedDecimals
+    if (oftSharedDecimals > STAKING_CONSTANTS.USDC_DECIMALS) {
+        return rewardInTokenUnits / BigInt(10 ** (oftSharedDecimals - STAKING_CONSTANTS.USDC_DECIMALS))
+    } else {
+        return rewardInTokenUnits * BigInt(10 ** (STAKING_CONSTANTS.USDC_DECIMALS - oftSharedDecimals))
+    }
 }
 
 /**
@@ -179,7 +188,13 @@ export function getStakingStatus(stakeInfo: ContractStakeInfo): StakingStatus {
     }
 
     if (hasUnstaked) {
-        // 检查是否可以withdraw来确定具体状态
+        // 检查是否已经过了withdraw时间
+        const canWithdrawNow = canWithdraw(stakeInfo)
+        if (canWithdrawNow) {
+            // 如果可以withdraw，检查是否还有代币（判断是否已经withdraw）
+            // 注意：这里的逻辑假设withdraw后stakeAmount会变为0
+            return stakeInfo.stakeAmount > 0n ? StakingStatus.UNSTAKED : StakingStatus.WITHDRAWN
+        }
         return StakingStatus.UNSTAKED
     }
 

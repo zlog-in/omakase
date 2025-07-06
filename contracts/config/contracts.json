@@ -1,0 +1,17 @@
+{
+  "testnet": {
+    "sepolia": {
+      "Omakase": "0x2dA943A5E008b9A85aA0E80F0d7d8d53a4945b2D",
+      "Adapter": "0x5132f64f01140C4EfCdEbfcFe769c69E023cd694",
+      "Waiter": "0xCccBc8e303E254c854bC132A5c9e4d477b6288c8"
+    },
+    "arbitrumsepolia": {
+      "OFT": "0x3b6Be820c586B7235e19c7956e9408879A0F6065",
+      "Waiter": "0xCccBc8e303E254c854bC132A5c9e4d477b6288c8"
+    },
+    "basesepolia": {
+      "OFT": "0x3b6Be820c586B7235e19c7956e9408879A0F6065",
+      "Chef": "0xcaa8340AA4a760cF83D9e712597AD045fA1b3C50"
+    }
+  }
+}

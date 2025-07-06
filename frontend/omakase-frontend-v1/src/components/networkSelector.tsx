@@ -64,9 +64,9 @@ export function NetworkSelector() {
             await switchChain({ chainId: targetChainId })
             const targetChain = supportedChains.find(chain => chain.id === targetChainId)
             toast.success(`Switched to ${targetChain?.name}`)
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to switch chain:', error)
-            toast.error(`Failed to switch network: ${error.message || 'Unknown error'}`)
+            toast.error(`Failed to switch network: ${(error as Error)?.message || 'Unknown error'}`)
         }
     }
 

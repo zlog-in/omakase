@@ -13,7 +13,6 @@ import {
   canCancelUnstake,
   canWithdraw,
   calculateRewardProjection,
-  calculateTimeRemaining,
   formatTimeRemaining,
   calculateAPR
 } from '@/lib/utils'
@@ -188,9 +187,9 @@ export function useStaking(): UseStakingReturn {
       ])
       console.log('✅ Staking data refreshed successfully')
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Stake failed:', error)
-      const errorMessage = error?.message || 'Stake failed'
+      const errorMessage = (error as Error)?.message || 'Stake failed'
       customToast.error(errorMessage)
       throw error
     } finally {
@@ -210,20 +209,30 @@ export function useStaking(): UseStakingReturn {
     refetchAllowance
   ])
 
-  // Unstake操作 - 允许随时unstake，没有时间限制
+  // Unstake操作 - 恢复检查机制，但允许重新unstake
   const unstake = useCallback(async (): Promise<void> => {
     if (!waiterContract.address || !safeChainId || !safeUserStakeInfo) {
       throw new Error('Cannot unstake: invalid state')
     }
 
-    // 移除对已发起unstake请求的检查，允许随时unstake
-    // 用户可以随时发起新的unstake请求
+    // 如果已经发起过unstake请求，给用户提示但仍允许操作
+    if (safeUserStakeInfo.lastUnstakeTime > 0n) {
+      const confirmed = window.confirm(
+        '⚠️ 你已经发起过unstake请求\n\n' +
+        '重新unstake将会重置15秒的等待时间。\n' +
+        '确定要继续吗？'
+      )
+      if (!confirmed) {
+        setIsLoading(false)
+        return
+      }
+    }
 
     setIsLoading(true)
     try {
       await waiterContract.unstake()
 
-      customToast.staking.unstakeSuccess('Unstake request initiated successfully! You can withdraw anytime.')
+      customToast.staking.unstakeSuccess(STAKING_CONSTANTS.UNSTAKE_PERIOD)
 
       // 刷新数据
       console.log('🔄 Refreshing staking data after unstake operation...')
@@ -233,9 +242,9 @@ export function useStaking(): UseStakingReturn {
       ])
       console.log('✅ Unstake data refreshed successfully')
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Unstake failed:', error)
-      const errorMessage = error?.message || 'Unstake failed'
+      const errorMessage = (error as Error)?.message || 'Unstake failed'
       customToast.error(errorMessage)
       throw error
     } finally {
@@ -268,9 +277,9 @@ export function useStaking(): UseStakingReturn {
       ])
       console.log('✅ Withdraw data refreshed successfully')
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Withdraw failed:', error)
-      const errorMessage = error?.message || 'Withdraw failed'
+      const errorMessage = (error as Error)?.message || 'Withdraw failed'
       customToast.error(errorMessage)
       throw error
     } finally {
@@ -301,9 +310,9 @@ export function useStaking(): UseStakingReturn {
       await refetchRewards()
       console.log('✅ Reward data refreshed successfully')
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Claim reward failed:', error)
-      const errorMessage = error?.message || 'Claim reward failed'
+      const errorMessage = (error as Error)?.message || 'Claim reward failed'
       customToast.error(errorMessage)
       throw error
     } finally {
@@ -392,9 +401,16 @@ export function useStaking(): UseStakingReturn {
     let unstakeLockRemaining = 0
 
     if (hasUnstaked && lastUnstakeTime) {
-      // 移除解锁期间逻辑：用户发起unstake后可以立即withdraw
-      unstakeUnlockTime = lastUnstakeTime // 解锁时间就是unstake时间
-      unstakeLockRemaining = 0 // 没有剩余锁定时间
+      // 恢复解锁期间逻辑：15秒后可以withdraw
+      const unstakeTimestamp = Number(safeUserStakeInfo.lastUnstakeTime)
+      const unlockTimestamp = unstakeTimestamp + STAKING_CONSTANTS.UNSTAKE_PERIOD
+      unstakeUnlockTime = new Date(unlockTimestamp * 1000)
+
+      if (typeof unstakeLockTime === 'bigint') {
+        unstakeLockRemaining = Number(unstakeLockTime)
+      } else {
+        unstakeLockRemaining = Math.max(0, unlockTimestamp - now)
+      }
     }
 
     // 计算质押持续时间 - 类型安全
@@ -503,7 +519,7 @@ export function useStaking(): UseStakingReturn {
 
   const canUnstake = useCallback((): boolean => {
     if (!safeUserStakeInfo) return false
-    // 简化条件：只要有质押金额就可以unstake，没有时间限制
+    // 只要有质押金额就可以unstake（允许重新unstake重置时间）
     return safeUserStakeInfo.stakeAmount > 0n
   }, [safeUserStakeInfo])
 

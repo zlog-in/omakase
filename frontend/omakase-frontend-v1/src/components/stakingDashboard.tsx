@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useStaking, useRealtimeRewards } from '@/hooks/useStaking'
+import { useStaking, useUnstakeCountdown, useRealtimeRewards } from '@/hooks/useStaking'
 import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
@@ -90,6 +90,23 @@ export function StakingDashboard() {
         return chainId ? getTokenInfo(chainId) : { name: 'Token', symbol: 'TOKEN', description: '' }
     }, [chainId])
 
+    // 获取质押状态 - 即使没有连接钱包也要调用，避免条件性Hook调用
+    const stakingStatus = getStakingStatus()
+    const rewardCalculation = getRewardCalculation()
+    
+    // 恢复倒计时功能，显示15秒锁定期间剩余时间 - 始终调用Hook
+    const countdownText = useUnstakeCountdown(stakingStatus.unstakeUnlockTime)
+    
+    // 构建realtimeRewards的参数，避免条件性Hook调用
+    const realtimeRewardsParam = stakingStatus.stakedAmountRaw > 0n ? {
+        stakeAmount: stakingStatus.stakedAmountRaw,
+        stakeReward: stakingStatus.rewardsRaw,
+        lastStakeTime: BigInt(stakingStatus.lastStakeTime ? Math.floor(stakingStatus.lastStakeTime.getTime() / 1000) : 0),
+        lastUnstakeTime: BigInt(stakingStatus.lastUnstakeTime ? Math.floor(stakingStatus.lastUnstakeTime.getTime() / 1000) : 0),
+    } : undefined
+    
+    const realtimeRewards = useRealtimeRewards(realtimeRewardsParam)
+
     if (!address) {
         return (
             <Card>
@@ -99,19 +116,6 @@ export function StakingDashboard() {
             </Card>
         )
     }
-
-    const stakingStatus = getStakingStatus()
-    const rewardCalculation = getRewardCalculation()
-    // 移除倒计时功能，因为不再需要等待解锁期间
-    // const countdownText = useUnstakeCountdown(stakingStatus.unstakeUnlockTime)
-    const realtimeRewards = useRealtimeRewards(
-        stakingStatus.stakedAmountRaw > 0n ? {
-            stakeAmount: stakingStatus.stakedAmountRaw,
-            stakeReward: stakingStatus.rewardsRaw,
-            lastStakeTime: BigInt(stakingStatus.lastStakeTime ? Math.floor(stakingStatus.lastStakeTime.getTime() / 1000) : 0),
-            lastUnstakeTime: BigInt(stakingStatus.lastUnstakeTime ? Math.floor(stakingStatus.lastUnstakeTime.getTime() / 1000) : 0),
-        } : undefined
-    )
 
     if (stakingStatus.status === StakingStatus.NOT_STAKED) {
         return (
@@ -171,7 +175,9 @@ export function StakingDashboard() {
             case StakingStatus.ACTIVE:
                 return `Your ${tokenInfo.symbol} tokens are actively earning rewards`
             case StakingStatus.UNSTAKED:
-                return "Unstake initiated - you can withdraw anytime"
+                return stakingStatus.canWithdraw 
+                    ? "Ready to withdraw your tokens"
+                    : "Unstake initiated - waiting for unlock period"
             case StakingStatus.WITHDRAWN:
                 return "Tokens have been withdrawn"
             default:
@@ -244,13 +250,34 @@ export function StakingDashboard() {
 
                     {/* Unstake状态特殊显示 */}
                     {stakingStatus.status === StakingStatus.UNSTAKED && (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className={`p-4 border rounded-lg ${
+                            stakingStatus.canWithdraw 
+                                ? 'bg-green-50 border-green-200' 
+                                : 'bg-yellow-50 border-yellow-200'
+                        }`}>
                             <div className="flex items-start gap-3">
-                                <AlertTriangle className="w-5 h-5 text-green-600 mt-0.5" />
+                                <AlertTriangle className={`w-5 h-5 mt-0.5 ${
+                                    stakingStatus.canWithdraw 
+                                        ? 'text-green-600' 
+                                        : 'text-yellow-600'
+                                }`} />
                                 <div className="flex-1">
-                                    <h4 className="font-medium text-green-800">Ready to Withdraw</h4>
-                                    <p className="text-sm text-green-700 mt-1">
-                                        ✅ Your unstake request has been processed. You can withdraw your tokens anytime or initiate another unstake request.
+                                    <h4 className={`font-medium ${
+                                        stakingStatus.canWithdraw 
+                                            ? 'text-green-800' 
+                                            : 'text-yellow-800'
+                                    }`}>
+                                        {stakingStatus.canWithdraw ? 'Ready to Withdraw!' : 'Unstake Lock Period'}
+                                    </h4>
+                                    <p className={`text-sm mt-1 ${
+                                        stakingStatus.canWithdraw 
+                                            ? 'text-green-700' 
+                                            : 'text-yellow-700'
+                                    }`}>
+                                        {stakingStatus.canWithdraw
+                                            ? "✅ Lock period has ended - You can now withdraw your tokens or unstake again"
+                                            : `🕐 ${countdownText} remaining until you can withdraw`
+                                        }
                                     </p>
                                     {stakingStatus.isUnstakeCancellable && (
                                         <div className="mt-3 p-3 bg-white rounded border">
@@ -289,14 +316,27 @@ export function StakingDashboard() {
                             </Button>
                         )}
 
-                        {stakingStatus.status === StakingStatus.UNSTAKED && (
+                        {stakingStatus.status === StakingStatus.UNSTAKED && stakingStatus.canWithdraw && (
                             <Button
                                 onClick={() => withdraw()}
                                 disabled={isLoading || !canWithdraw()}
-                                className="gap-2"
+                                className="gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 text-lg"
+                                size="lg"
                             >
-                                <TrendingUp className="w-4 h-4" />
-                                Withdraw {tokenInfo.symbol}
+                                <TrendingUp className="w-5 h-5" />
+                                🎉 Withdraw {tokenInfo.symbol} Now!
+                            </Button>
+                        )}
+
+                        {stakingStatus.status === StakingStatus.UNSTAKED && !stakingStatus.canWithdraw && (
+                            <Button
+                                onClick={() => withdraw()}
+                                disabled={true}
+                                variant="outline"
+                                className="gap-2 opacity-50 cursor-not-allowed"
+                            >
+                                <Clock className="w-4 h-4" />
+                                Withdraw in {countdownText}
                             </Button>
                         )}
 
@@ -308,7 +348,7 @@ export function StakingDashboard() {
                                 className="gap-2"
                             >
                                 <Clock className="w-4 h-4" />
-                                Unstake Again
+                                Unstake Again (Reset Timer)
                             </Button>
                         )}
 
@@ -360,7 +400,7 @@ export function StakingDashboard() {
                     {stakingStatus.status === StakingStatus.ACTIVE && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                             <p className="text-sm text-blue-700">
-                                💰 You're earning approximately <strong>{rewardCalculation.projectedDailyReward} USDC</strong> per day from your {stakingStatus.stakedAmount} {tokenInfo.symbol} stake.
+                                💰 You&apos;re earning approximately <strong>{rewardCalculation.projectedDailyReward} USDC</strong> per day from your {stakingStatus.stakedAmount} {tokenInfo.symbol} stake.
                                 Rewards are calculated continuously and can be claimed at any time.
                             </p>
                         </div>

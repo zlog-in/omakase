@@ -2,19 +2,19 @@ import toast from 'react-hot-toast'
 
 // 扩展 toast 功能，确保类型安全
 export const customToast = {
-    success: (message: string, options?: any) => {
+    success: (message: string, options?: Record<string, unknown>) => {
         return toast.success(message, options)
     },
 
-    error: (message: string, options?: any) => {
+    error: (message: string, options?: Record<string, unknown>) => {
         return toast.error(message, options)
     },
 
-    loading: (message: string, options?: any) => {
+    loading: (message: string, options?: Record<string, unknown>) => {
         return toast.loading(message, options)
     },
 
-    info: (message: string, options?: any) => {
+    info: (message: string, options?: Record<string, unknown>) => {
         return toast(message, {
             icon: 'ℹ️',
             style: {
@@ -25,7 +25,7 @@ export const customToast = {
         })
     },
 
-    warning: (message: string, options?: any) => {
+    warning: (message: string, options?: Record<string, unknown>) => {
         return toast(message, {
             icon: '⚠️',
             style: {
@@ -45,17 +45,21 @@ export const customToast = {
             })
         },
 
-        unstakeSuccess: (message: string = 'Unstake successful! You can withdraw anytime.') => {
-            return toast.success(message, {
-                icon: '✅',
-                duration: 4000,
+        unstakeSuccess: (lockPeriod: number) => {
+            return toast.success(`Unstake successful! You can withdraw after ${lockPeriod} seconds lock period.`, {
+                icon: '🕐',
+                duration: 5000,
             })
         },
 
         withdrawSuccess: () => {
-            return toast.success('Withdraw successful! Your tokens have been returned.', {
+            return toast.success('🎉 Withdraw successful! Your tokens have been returned to your wallet.', {
                 icon: '💰',
-                duration: 4000,
+                duration: 5000,
+                style: {
+                    background: '#10b981',
+                    color: '#ffffff',
+                },
             })
         },
 
@@ -96,7 +100,7 @@ export const customToast = {
             },
 
             unstaked: () => {
-                return toast('Unstake initiated. You can withdraw anytime.', {
+                return toast('Unstake initiated. You can withdraw after the lock period.', {
                     icon: 'ℹ️',
                     style: {
                         background: '#3b82f6',

@@ -323,7 +323,7 @@ export function useChefContract() {
 export function useChefReadContract() {
   const contractAddress = SUPPORTED_CHAINS.BASE_SEPOLIA.chefAddress as Address
 
-  const getTotalStakedAmount = () => {
+  const useTotalStakedAmount = () => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -342,7 +342,7 @@ export function useChefReadContract() {
   }
 
   // Enhanced Chef contract getUserStakeInfo with proper status handling
-  const getUserStakeInfo = (staker: Address): ChefContractQueryResult<ContractStakeInfo> => {
+  const useUserStakeInfo = (staker: Address): ChefContractQueryResult<ContractStakeInfo> => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -414,7 +414,7 @@ export function useChefReadContract() {
   }
 
   // 获取实时奖励
-  const getUserReward = (staker: Address) => {
+  const useUserReward = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -450,7 +450,7 @@ export function useChefReadContract() {
   }
 
   // 获取unstake锁定剩余时间
-  const getUserUnstakeLockTime = (staker: Address) => {
+  const useUserUnstakeLockTime = (staker: Address) => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -483,7 +483,7 @@ export function useChefReadContract() {
   }
 
   // 获取合约常量
-  const getUnstakePeriod = () => {
+  const useUnstakePeriod = () => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -494,7 +494,7 @@ export function useChefReadContract() {
     return result
   }
 
-  const getStakeRewardRate = () => {
+  const useStakeRewardRate = () => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -521,7 +521,7 @@ export function useChefReadContract() {
   }
 
   // 获取总质押金额（新ABI版本）
-  const getTotalStakedAmountNew = () => {
+  const useTotalStakedAmountNew = () => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -539,13 +539,13 @@ export function useChefReadContract() {
   }
 
   return {
-    getTotalStakedAmount,
-    getTotalStakedAmountNew,
-    getUserStakeInfo,
-    getUserReward,
-    getUserUnstakeLockTime,
-    getUnstakePeriod,
-    getStakeRewardRate,
+    getTotalStakedAmount: useTotalStakedAmount,
+    getTotalStakedAmountNew: useTotalStakedAmountNew,
+    getUserStakeInfo: useUserStakeInfo,
+    getUserReward: useUserReward,
+    getUserUnstakeLockTime: useUserUnstakeLockTime,
+    getUnstakePeriod: useUnstakePeriod,
+    getStakeRewardRate: useStakeRewardRate,
     verifyContract,
   }
 }
@@ -649,7 +649,7 @@ export function useOFTContract(chainId: number) {
   }
 
   // Get token balance with error handling
-  const getTokenBalance = (account: Address) => {
+  const useTokenBalance = (account: Address) => {
     const result = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
       abi: contractABI,
@@ -738,7 +738,7 @@ export function useOFTContract(chainId: number) {
   return {
     address: contractAddress,
     approve,
-    getTokenBalance,
+    getTokenBalance: useTokenBalance,
     useTokenAllowance,
     useTokenInfo,
   }
@@ -780,7 +780,7 @@ export function showTransactionSuccess(txHash: string, chainId: number) {
 }
 
 // 合约事件监听Hook
-export function useStakingEvents(_userAddress?: Address) {
+export function useStakingEvents() {
   // 这里可以添加事件监听逻辑
   // 目前先返回空实现，后续可以扩展
   return {

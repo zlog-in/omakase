@@ -168,7 +168,7 @@ export function calculateCurrentReward(stakeInfo: ContractStakeInfo, oftSharedDe
 }
 
 /**
- * 获取质押状态 - 简化逻辑，移除时间依赖
+ * 获取质押状态 - 恢复时间依赖逻辑
  */
 export function getStakingStatus(stakeInfo: ContractStakeInfo): StakingStatus {
     const hasStaked = stakeInfo.stakeAmount > 0n
@@ -179,7 +179,7 @@ export function getStakingStatus(stakeInfo: ContractStakeInfo): StakingStatus {
     }
 
     if (hasUnstaked) {
-        // 简化逻辑：一旦发起unstake就是UNSTAKED状态，可以立即withdraw
+        // 检查是否可以withdraw来确定具体状态
         return StakingStatus.UNSTAKED
     }
 
@@ -195,11 +195,15 @@ export function canCancelUnstake(stakeInfo: ContractStakeInfo): boolean {
 }
 
 /**
- * 检查是否可以withdraw - 移除时间限制，只要发起过unstake就可以withdraw
+ * 检查是否可以withdraw - 需要等待15秒锁定期间
  */
 export function canWithdraw(stakeInfo: ContractStakeInfo): boolean {
-    // 简化逻辑：只要发起过unstake请求就可以立即withdraw
-    return stakeInfo.lastUnstakeTime > 0n
+    if (stakeInfo.lastUnstakeTime === 0n) return false
+
+    const now = Math.floor(Date.now() / 1000)
+    const unstakeTime = Number(stakeInfo.lastUnstakeTime)
+
+    return (now - unstakeTime) >= STAKING_CONSTANTS.UNSTAKE_PERIOD
 }
 
 /**
@@ -276,12 +280,12 @@ export function isValidAmount(amount: string): boolean {
 /**
  * 格式化错误信息
  */
-export function formatError(error: any): string {
+export function formatError(error: unknown): string {
     if (typeof error === 'string') return error
 
-    if (error?.reason) return error.reason
-    if (error?.message) return error.message
-    if (error?.shortMessage) return error.shortMessage
+    if (error && typeof error === 'object' && 'reason' in error && typeof error.reason === 'string') return error.reason
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message
+    if (error && typeof error === 'object' && 'shortMessage' in error && typeof error.shortMessage === 'string') return error.shortMessage
 
     return 'An unknown error occurred'
 }
@@ -289,7 +293,7 @@ export function formatError(error: any): string {
 /**
  * 检查是否是用户拒绝交易错误
  */
-export function isUserRejectedError(error: any): boolean {
+export function isUserRejectedError(error: unknown): boolean {
     const message = formatError(error).toLowerCase()
     return message.includes('user rejected') ||
         message.includes('user denied') ||
@@ -329,7 +333,7 @@ export function getAddressUrl(address: string, chainId: number): string {
 /**
  * 调试日志（仅在开发环境）
  */
-export function debugLog(message: string, data?: any): void {
+export function debugLog(message: string, data?: unknown): void {
     if (process.env.NODE_ENV === 'development') {
         console.log(`[Staking Debug] ${message}`, data || '')
     }
@@ -338,11 +342,11 @@ export function debugLog(message: string, data?: any): void {
 /**
  * 性能监控包装器
  */
-export function withPerformance<T extends (...args: any[]) => any>(
+export function withPerformance<T extends (...args: unknown[]) => unknown>(
     fn: T,
     name: string
 ): T {
-    return ((...args: any[]) => {
+    return ((...args: unknown[]) => {
         const start = performance.now()
         const result = fn(...args)
         const end = performance.now()

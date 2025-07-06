@@ -86,8 +86,8 @@ export interface UserStakingPosition {
   // 时间信息
   lastStakeTime: Date | null
   lastUnstakeTime: Date | null
-  unstakeUnlockTime: Date | null  // unstake时间（立即可withdraw）
-  unstakeLockRemaining: number    // 剩余锁定时间（总是0，无锁定期间）
+  unstakeUnlockTime: Date | null  // 可以withdraw的时间（unstake后15秒）
+  unstakeLockRemaining: number    // 剩余锁定时间（秒）
 
   // 计算字段
   stakingDuration: number         // 质押持续时间（秒）
@@ -116,7 +116,7 @@ export interface GlobalStats {
   totalUsers: number
   averageStakeAmount: string
   stakingAPR: number           // 年化收益率
-  unstakePeriod: number        // unstake锁定期（已移除，值为0）
+  unstakePeriod: number        // unstake锁定期（15秒）
   rewardRate: number           // 奖励率（BP per second）
 }
 
@@ -263,7 +263,7 @@ export interface UseContractReturn {
 export interface StakingError extends Error {
   code?: string | number
   type: 'NETWORK_ERROR' | 'CONTRACT_ERROR' | 'USER_REJECTED' | 'INSUFFICIENT_BALANCE' | 'UNSTAKE_PERIOD_NOT_PASSED' | 'NO_STAKE_FOUND' | 'ALREADY_UNSTAKED'
-  details?: any
+  details?: Record<string, unknown>
 }
 
 // 网络切换相关类型
@@ -358,7 +358,7 @@ export interface AppConfig {
 }
 
 // API响应类型
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   error?: string
@@ -431,12 +431,7 @@ export type ParseAmountFunction = (amount: string, decimals?: number) => bigint
 export type CalculateRewardFunction = (stakeAmount: bigint, duration: number, rate: number) => bigint
 export type FormatTimeFunction = (seconds: number, options?: TimeFormatOptions) => string
 
-// 模块声明扩展
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
+// 模块声明扩展 - Window.ethereum已在其他地方声明
 
 declare module 'wagmi' {
   interface Register {

@@ -11,8 +11,8 @@ import { useStaking } from '@/hooks/useStaking'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Shield, Clock, DollarSign, RotateCcw } from 'lucide-react'
-import { StakingStatus } from '@/types'
-import { SUPPORTED_CHAINS, STAKING_CONSTANTS } from '@/lib/constants'
+import { StakingStatus, UserStakingPosition } from '@/types'
+import { SUPPORTED_CHAINS } from '@/lib/constants'
 
 // 代币信息映射
 const TOKEN_INFO = {
@@ -134,7 +134,7 @@ function StakingStats() {
 }
 
 // 简化的Unstake警告组件（内联）
-function UnstakeWarning({ stakingStatus }: { stakingStatus: any }) {
+function UnstakeWarning({ stakingStatus }: { stakingStatus: UserStakingPosition }) {
   const [isMounted, setIsMounted] = useState(false)
   const { cancelUnstake, isLoading } = useStaking()
   const chainId = useChainId()

@@ -304,7 +304,224 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Step-by-Step Vercel Deployment Guide
+
+#### Prerequisites
+- A GitHub, GitLab, or Bitbucket account with your repository
+- A Vercel account (free tier available at [vercel.com](https://vercel.com))
+- Your environment variables ready
+
+#### Method 1: Deploy via Vercel Dashboard (Recommended)
+
+1. **Import Your Repository**
+   - Go to [vercel.com/new](https://vercel.com/new)
+   - Click "Import Git Repository"
+   - Select your Git provider (GitHub/GitLab/Bitbucket)
+   - Authorize Vercel to access your repositories
+   - Find and select your Omakase frontend repository
+
+2. **Configure Your Project**
+   - **Framework Preset**: Vercel will auto-detect Next.js
+   - **Root Directory**: Select `frontend/omakase-frontend-v1` if your repo includes backend
+   - **Build Command**: Leave as default (`next build`) or use `npm run build`
+   - **Output Directory**: Leave as default (`.next`)
+   - **Install Command**: Leave as default or specify `npm install`
+
+3. **Set Environment Variables**
+   - Click on "Environment Variables"
+   - Add each variable from your `.env.local` file:
+     ```
+     NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC=your_ethereum_sepolia_rpc
+     NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC=your_arbitrum_sepolia_rpc
+     NEXT_PUBLIC_BASE_SEPOLIA_RPC=your_base_sepolia_rpc
+     NEXT_PUBLIC_ETHEREUM_SEPOLIA_WAITER_ADDRESS=your_waiter_address
+     NEXT_PUBLIC_ARBITRUM_SEPOLIA_WAITER_ADDRESS=your_waiter_address
+     NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS=your_chef_address
+     ```
+   - Ensure all variables starting with `NEXT_PUBLIC_` are added
+   - You can add variables for Production, Preview, and Development environments
+
+4. **Deploy**
+   - Click "Deploy"
+   - Vercel will build and deploy your application
+   - Monitor the build logs for any errors
+   - Once complete, you'll receive a production URL (e.g., `your-app.vercel.app`)
+
+#### Method 2: Deploy via Vercel CLI
+
+1. **Install Vercel CLI**
+   ```bash
+   npm i -g vercel
+   # or
+   yarn global add vercel
+   ```
+
+2. **Login to Vercel**
+   ```bash
+   vercel login
+   ```
+
+3. **Deploy from Project Directory**
+   ```bash
+   cd frontend/omakase-frontend-v1
+   vercel
+   ```
+
+4. **Follow the Prompts**
+   - Set up and deploy: `Y`
+   - Which scope: Select your account
+   - Link to existing project: `N` (for first deployment)
+   - Project name: Enter your desired name
+   - Directory: `./` (current directory)
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+   - Development Command: `npm run dev`
+
+5. **Set Environment Variables**
+   ```bash
+   # Set each environment variable
+   vercel env add NEXT_PUBLIC_ETHEREUM_SEPOLIA_RPC
+   vercel env add NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC
+   vercel env add NEXT_PUBLIC_BASE_SEPOLIA_RPC
+   vercel env add NEXT_PUBLIC_ETHEREUM_SEPOLIA_WAITER_ADDRESS
+   vercel env add NEXT_PUBLIC_ARBITRUM_SEPOLIA_WAITER_ADDRESS
+   vercel env add NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS
+   ```
+
+6. **Deploy to Production**
+   ```bash
+   vercel --prod
+   ```
+
+#### Post-Deployment Configuration
+
+1. **Custom Domain (Optional)**
+   - Navigate to your project settings on Vercel Dashboard
+   - Go to "Domains" section
+   - Add your custom domain (e.g., `app.omakase.io`)
+   - Follow DNS configuration instructions
+   - Vercel automatically provisions SSL certificates
+
+2. **Environment-Specific Deployments**
+   - **Production**: Automatically deployed from main/master branch
+   - **Preview**: Automatically deployed for each pull request
+   - **Development**: Can be set up for specific branches
+
+3. **Build & Function Settings**
+   - **Node.js Version**: Ensure it matches your local version (18.x recommended)
+   - **Build Cache**: Enabled by default for faster subsequent deployments
+   - **Function Region**: Select closest to your users (default: Washington, D.C., USA)
+
+#### Deployment Checklist
+
+- [ ] All environment variables are correctly set in Vercel
+- [ ] RPC endpoints are valid and have sufficient rate limits
+- [ ] Contract addresses are correct for each network
+- [ ] Build completes without errors
+- [ ] Application loads correctly on the deployment URL
+- [ ] Wallet connection works properly
+- [ ] Network switching functions correctly
+- [ ] Staking operations work on all supported networks
+
+#### Troubleshooting Common Issues
+
+1. **Build Failures**
+   - Check build logs in Vercel dashboard
+   - Ensure all dependencies are in `package.json`
+   - Verify Node.js version compatibility
+   - Check for TypeScript errors: `npm run type-check`
+
+2. **Environment Variables Not Working**
+   - Ensure all variables start with `NEXT_PUBLIC_` for client-side access
+   - Redeploy after adding/changing environment variables
+   - Check variable names match exactly (case-sensitive)
+
+3. **404 Errors on Routes**
+   - Verify `next.config.js` settings
+   - Ensure dynamic routes are properly configured
+   - Check for case sensitivity in file names
+
+4. **Performance Issues**
+   - Enable Vercel Analytics (free tier available)
+   - Optimize images using Next.js Image component
+   - Review bundle size with `npm run analyze`
+
+5. **CORS or API Issues**
+   - Add allowed origins to your RPC providers
+   - Configure headers in `next.config.js` if needed
+   - Use Vercel Edge Functions for API routes
+
+#### Monitoring & Analytics
+
+1. **Vercel Analytics**
+   - Enable in project settings
+   - Monitor Core Web Vitals
+   - Track user interactions and performance
+
+2. **Runtime Logs**
+   - Access via Vercel Dashboard → Functions tab
+   - Use for debugging production issues
+   - Set up log drains for external monitoring
+
+3. **Speed Insights**
+   - Automatic performance monitoring
+   - Real user metrics (RUM)
+   - Performance recommendations
+
+#### Continuous Deployment
+
+1. **GitHub Integration**
+   ```yaml
+   # .github/workflows/preview.yml
+   name: Vercel Preview Deployment
+   env:
+     VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+     VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+   on:
+     push:
+       branches-ignore:
+         - main
+   jobs:
+     Deploy-Preview:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v3
+         - name: Install Vercel CLI
+           run: npm install --global vercel@latest
+         - name: Pull Vercel Environment
+           run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+         - name: Build Project
+           run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+         - name: Deploy to Vercel
+           run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+   ```
+
+2. **Production Deployment Protection**
+   - Enable "Protection" in Vercel project settings
+   - Require approval for production deployments
+   - Set up deployment notifications
+
+#### Best Practices
+
+1. **Security**
+   - Never commit `.env.local` files
+   - Use Vercel's encrypted environment variables
+   - Rotate API keys regularly
+   - Enable 2FA on your Vercel account
+
+2. **Performance**
+   - Use ISR (Incremental Static Regeneration) where applicable
+   - Optimize images and assets
+   - Enable compression
+   - Use Edge Runtime for API routes when possible
+
+3. **Scalability**
+   - Monitor usage in Vercel dashboard
+   - Set up alerts for high traffic
+   - Consider Vercel Pro for higher limits
+   - Use caching strategies effectively
+
+For more detailed information, check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) and [Vercel documentation](https://vercel.com/docs).
 
 ## 📄 License
 

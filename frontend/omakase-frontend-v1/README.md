@@ -142,12 +142,30 @@ yarn start
 
 The frontend interacts with the following smart contracts:
 
-### Ethereum Sepolia
-- **Omakase Token**: `0x2dA943A5E008b9A85aA0E80F0d7d8d53a4945b2D`
-- **LayerZero Adapter**: `0x5132f64f01140C4EfCdEbfcFe769c69E023cd694`
+### Ethereum Sepolia (Source Chain)
+- **Omakase Token (ERC20)**: `0x2dA943A5E008b9A85aA0E80F0d7d8d53a4945b2D` - Native token
+- **LayerZero Adapter**: `0x5132f64f01140C4EfCdEbfcFe769c69E023cd694` - Cross-chain bridge adapter
+- **Waiter Contract**: `0xCccBc8e303E254c854bC132A5c9e4d477b6288c8` - Cross-chain message handler
 
-### Arbitrum Sepolia & Base Sepolia
-- **Omakase OFT**: `0x3b6Be820c586B7235e19c7956e9408879A0F6065`
+### Arbitrum Sepolia (Destination Chain)
+- **Omakase OFT**: `0x3b6Be820c586B7235e19c7956e9408879A0F6065` - LayerZero OFT token
+- **Waiter Contract**: `0xCccBc8e303E254c854bC132A5c9e4d477b6288c8` - Cross-chain message handler
+
+### Base Sepolia (Hub Chain)
+- **Omakase OFT**: `0x3b6Be820c586B7235e19c7956e9408879A0F6065` - LayerZero OFT token
+- **Chef Contract**: `0xcaa8340AA4a760cF83D9e712597AD045fA1b3C50` - **Main staking logic contract**
+
+## 🏗️ Architecture Overview
+
+### Contract Deployment Strategy:
+- **Ethereum Sepolia**: Native ERC20 token + Waiter for cross-chain operations
+- **Arbitrum Sepolia**: OFT token + Waiter for cross-chain operations  
+- **Base Sepolia**: OFT token + Chef contract (central staking hub)
+
+### Frontend Query Logic:
+- **Staking Data**: Always queries Chef contract on Base Sepolia (regardless of current chain)
+- **Token Balances**: Queries native ERC20 on Ethereum Sepolia, OFT contracts on other chains
+- **Cross-chain Operations**: Uses appropriate Waiter contracts on source chains
 
 ### LayerZero Endpoint IDs
 - Ethereum Sepolia: `40161`

@@ -41,12 +41,29 @@ export interface ChainConfig {
   layerZeroEndpointId: number
 }
 
-// 合约中的StakeInfo结构体
+// Chef合约中的StakeInfo结构体 - 精确匹配Solidity定义
 export interface ContractStakeInfo {
-  stakeAmount: bigint
-  stakeReward: bigint
-  lastStakeTime: bigint
-  lastUnstakeTime: bigint
+  stakeAmount: bigint       // 用户质押的代币数量 (以wei为单位)
+  stakeReward: bigint       // 累积的奖励 (以最小单位为单位, 6 decimals for USDC)
+  lastStakeTime: bigint     // 最后一次质押的时间戳 (Unix timestamp in seconds)
+  lastUnstakeTime: bigint   // 最后一次发起unstake的时间戳 (0表示未发起unstake)
+}
+
+// Chef合约数据状态枚举 - 基于合约逻辑
+export enum ChefContractDataStatus {
+  NO_DATA = 'no_data',           // 合约返回空数据 (用户从未质押)
+  LOADING = 'loading',           // 正在加载数据
+  ERROR = 'error',               // 合约调用错误
+  SUCCESS = 'success'            // 成功获取数据
+}
+
+// Chef合约查询结果包装器
+export interface ChefContractQueryResult<T> {
+  data: T | null
+  status: ChefContractDataStatus
+  error?: Error | null
+  isLoading: boolean
+  isEmpty: boolean               // 数据为空但非错误状态
 }
 
 // 前端使用的质押信息 - 扩展合约数据
@@ -79,6 +96,16 @@ export interface UserStakingPosition {
 
   // 特殊状态标识
   isUnstakeCancellable: boolean   // 是否可以通过重新质押取消unstake
+
+  // Chef合约元数据
+  chefContractData: {
+    queryStatus: ChefContractDataStatus    // 合约查询状态
+    lastQueryTime: Date | null             // 最后一次查询时间
+    isFirstTimeUser: boolean               // 是否为首次使用用户
+    hasValidStakeData: boolean             // 是否有有效的质押数据
+    contractAddress: string                // Chef合约地址
+    blockNumber?: bigint                   // 查询时的区块号
+  }
 }
 
 // 全局统计数据接口

@@ -1,10 +1,19 @@
 import { useReadContract, useWriteContract, useAccount } from 'wagmi'
+import { readContract } from 'wagmi/actions'
 import { useEffect } from 'react'
 import { Address } from 'viem'
 import { WAITER_ABI, CHEF_ABI, OFT_ABI, NATIVE_ERC20_ABI } from '@/lib/contracts'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
-import { ContractStakeInfo } from '@/types'
+import { wagmiConfig } from '@/lib/wagmi'
+import { ContractStakeInfo, ChefContractDataStatus, ChefContractQueryResult } from '@/types'
 import toast from 'react-hot-toast'
+
+// 定义错误类型
+interface ContractError extends Error {
+  message: string
+  code?: string | number
+  data?: unknown
+}
 
 // Define supported chain IDs type
 type SupportedChainId = 11155111 | 421614 | 84532
@@ -23,152 +32,269 @@ export function useWaiterContract(chainId: number) {
     }
   }
 
+  // 获取对应链的ERC20代币合约地址（用于approve）
+  const getTokenAddress = (chainId: number): Address | null => {
+    switch (chainId) {
+      case SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id:
+        return SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.oftAddress as Address // Omakase原生代币
+      case SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id:
+        return SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.oftAddress as Address // OFT代币
+      default:
+        return null
+    }
+  }
+
   const contractAddress = getWaiterAddress(chainId)
+  const tokenAddress = getTokenAddress(chainId)
 
   const { writeContract } = useWriteContract()
 
+  // 获取LayerZero费用 - 使用readContract直接调用
+  const quoteStake = async (amount: bigint) => {
+    if (!contractAddress || !address) throw new Error('No contract or address')
+    
+    try {
+      const data = await readContract(wagmiConfig, {
+        address: contractAddress,
+        abi: WAITER_ABI,
+        functionName: 'quoteStake',
+        args: [address as Address, amount],
+      })
+      
+      if (typeof data !== 'bigint') {
+        if (typeof data === 'string') return BigInt(data)
+        throw new Error('Failed to fetch LayerZero fee for stake')
+      }
+      return data
+    } catch (error) {
+      console.error('Error in quoteStake:', error)
+      throw new Error('Failed to fetch LayerZero fee for stake')
+    }
+  }
+  
+  const quoteUnstake = async () => {
+    if (!contractAddress || !address) throw new Error('No contract or address')
+    
+    try {
+      const data = await readContract(wagmiConfig, {
+        address: contractAddress,
+        abi: WAITER_ABI,
+        functionName: 'quoteUnstake',
+        args: [address as Address],
+      })
+      
+      if (typeof data !== 'bigint') {
+        if (typeof data === 'string') return BigInt(data)
+        throw new Error('Failed to fetch LayerZero fee for unstake')
+      }
+      return data
+    } catch (error) {
+      console.error('Error in quoteUnstake:', error)
+      throw new Error('Failed to fetch LayerZero fee for unstake')
+    }
+  }
+  
+  const quoteWithdraw = async () => {
+    if (!contractAddress || !address) throw new Error('No contract or address')
+    
+    try {
+      const data = await readContract(wagmiConfig, {
+        address: contractAddress,
+        abi: WAITER_ABI,
+        functionName: 'quoteWithdraw',
+        args: [address as Address],
+      })
+      
+      if (typeof data !== 'bigint') {
+        if (typeof data === 'string') return BigInt(data)
+        throw new Error('Failed to fetch LayerZero fee for withdraw')
+      }
+      return data
+    } catch (error) {
+      console.error('Error in quoteWithdraw:', error)
+      throw new Error('Failed to fetch LayerZero fee for withdraw')
+    }
+  }
+  
+  const quoteClaim = async () => {
+    if (!contractAddress || !address) throw new Error('No contract or address')
+    
+    try {
+      const data = await readContract(wagmiConfig, {
+        address: contractAddress,
+        abi: WAITER_ABI,
+        functionName: 'quoteClaim',
+        args: [address as Address],
+      })
+      
+      if (typeof data !== 'bigint') {
+        if (typeof data === 'string') return BigInt(data)
+        throw new Error('Failed to fetch LayerZero fee for claim')
+      }
+      return data
+    } catch (error) {
+      console.error('Error in quoteClaim:', error)
+      throw new Error('Failed to fetch LayerZero fee for claim')
+    }
+  }
+
+  // 代币授权 - 授权Waiter合约使用代币
+  const approve = async (amount: bigint) => {
+    if (!contractAddress || !tokenAddress) {
+      const error = 'Unsupported chain for token approval'
+      toast.error(error)
+      throw new Error(error)
+    }
+    try {
+      toast.loading('Approving token spending...', { id: 'approve-tx' })
+      
+      // 获取对应的ABI
+      const tokenABI = chainId === SUPPORTED_CHAINS.ETHEREUM_SEPOLIA.id ? NATIVE_ERC20_ABI : OFT_ABI
+      
+      const result = await writeContract({
+        address: tokenAddress,
+        abi: tokenABI,
+        functionName: 'approve',
+        args: [contractAddress, amount],
+        chainId: chainId as SupportedChainId,
+      })
+      toast.success('Token approval submitted successfully!', { id: 'approve-tx' })
+      return result
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Token approval failed'
+      toast.error(errorMessage, { id: 'approve-tx' })
+      throw contractError
+    }
+  }
+
+  // 跨链stake - 更新为匹配Hardhat脚本模式
   const stake = async (amount: bigint) => {
     if (!contractAddress) {
       const error = 'Unsupported chain for staking'
       toast.error(error)
       throw new Error(error)
     }
-
     try {
-      toast.loading('Initiating stake transaction...', { id: 'stake-tx' })
-
+      toast.loading('Initiating cross-chain stake transaction...', { id: 'stake-tx' })
+      
+      // 获取LayerZero费用，传入用户地址和质押数量
+      const lzFee = await quoteStake(amount)
+      
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
         functionName: 'stake',
         args: [amount],
         chainId: chainId as SupportedChainId,
+        value: lzFee, // 支付LayerZero费用
       })
-
       toast.success('Stake transaction submitted successfully!', { id: 'stake-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Stake transaction failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Stake transaction failed'
       toast.error(errorMessage, { id: 'stake-tx' })
-      throw error
+      throw contractError
     }
   }
 
+  // 跨链unstake
   const unstake = async () => {
     if (!contractAddress) {
       const error = 'Unsupported chain for unstaking'
       toast.error(error)
       throw new Error(error)
     }
-
     try {
-      toast.loading('Initiating unstake transaction...', { id: 'unstake-tx' })
-
+      toast.loading('Initiating cross-chain unstake transaction...', { id: 'unstake-tx' })
+      const lzFee = await quoteUnstake()
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
         functionName: 'unstake',
         args: [],
         chainId: chainId as SupportedChainId,
+        value: lzFee,
       })
-
       toast.success('Unstake transaction submitted successfully!', { id: 'unstake-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Unstake transaction failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Unstake transaction failed'
       toast.error(errorMessage, { id: 'unstake-tx' })
-      throw error
+      throw contractError
     }
   }
 
+  // 跨链withdraw
   const withdraw = async () => {
     if (!contractAddress) {
       const error = 'Unsupported chain for withdrawal'
       toast.error(error)
       throw new Error(error)
     }
-
     try {
-      toast.loading('Initiating withdraw transaction...', { id: 'withdraw-tx' })
-
+      toast.loading('Initiating cross-chain withdraw transaction...', { id: 'withdraw-tx' })
+      const lzFee = await quoteWithdraw()
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
         functionName: 'withdraw',
         args: [],
         chainId: chainId as SupportedChainId,
+        value: lzFee,
       })
-
       toast.success('Withdraw transaction submitted successfully!', { id: 'withdraw-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Withdraw transaction failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Withdraw transaction failed'
       toast.error(errorMessage, { id: 'withdraw-tx' })
-      throw error
+      throw contractError
     }
   }
 
+  // 跨链claim
   const claim = async () => {
     if (!contractAddress) {
       const error = 'Unsupported chain for claiming rewards'
       toast.error(error)
       throw new Error(error)
     }
-
     try {
-      toast.loading('Initiating claim transaction...', { id: 'claim-tx' })
-
+      toast.loading('Initiating cross-chain claim transaction...', { id: 'claim-tx' })
+      const lzFee = await quoteClaim()
       const result = await writeContract({
         address: contractAddress,
         abi: WAITER_ABI,
         functionName: 'claim',
         args: [],
         chainId: chainId as SupportedChainId,
+        value: lzFee,
       })
-
       toast.success('Claim transaction submitted successfully!', { id: 'claim-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Claim transaction failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Claim transaction failed'
       toast.error(errorMessage, { id: 'claim-tx' })
-      throw error
-    }
-  }
-
-  const receiveReward = async (message: string, attestation: string) => {
-    if (!contractAddress) {
-      const error = 'Unsupported chain for receiving rewards'
-      toast.error(error)
-      throw new Error(error)
-    }
-
-    try {
-      toast.loading('Processing reward reception...', { id: 'receive-reward-tx' })
-
-      const result = await writeContract({
-        address: contractAddress,
-        abi: WAITER_ABI,
-        functionName: 'receiveReward',
-        args: [message, attestation],
-        chainId: chainId as SupportedChainId,
-      })
-
-      toast.success('Reward reception processed successfully!', { id: 'receive-reward-tx' })
-      return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Reward reception failed'
-      toast.error(errorMessage, { id: 'receive-reward-tx' })
-      throw error
+      throw contractError
     }
   }
 
   return {
     address: contractAddress,
+    tokenAddress,
+    approve,
     stake,
     unstake,
     withdraw,
     claim,
-    receiveReward,
+    quoteStake,
+    quoteUnstake,
+    quoteWithdraw,
+    quoteClaim,
   }
 }
 
@@ -213,8 +339,8 @@ export function useChefReadContract() {
     return result
   }
 
-  // 修复：明确处理tuple返回类型，移除渲染期间的toast
-  const getUserStakeInfo = (staker: Address) => {
+  // Enhanced Chef contract getUserStakeInfo with proper status handling
+  const getUserStakeInfo = (staker: Address): ChefContractQueryResult<ContractStakeInfo> => {
     const result = useReadContract({
       address: contractAddress,
       abi: CHEF_ABI,
@@ -222,28 +348,66 @@ export function useChefReadContract() {
       args: [staker],
       query: {
         enabled: !!staker,
+        retry: (failureCount, error) => {
+          // Don't retry if it's a "no data" error (user has no stake)
+          if (error?.message?.includes('returned no data')) {
+            return false
+          }
+          return failureCount < 3
+        }
       }
     })
 
     // 使用useEffect来处理错误，避免渲染期间的状态更新
     useEffect(() => {
       if (result.error && staker) {
-        console.error('Failed to fetch stake information for:', staker, result.error)
+        if (result.error.message?.includes('returned no data')) {
+          console.log(`📊 Chef Contract: No staking data for ${staker} - first time user`)
+        } else {
+          console.error('❌ Chef Contract: Failed to fetch stake info for:', staker, result.error)
+        }
       }
     }, [result.error, staker])
 
-    // 修复：明确类型转换和安全处理
-    const transformedResult = {
-      ...result,
-      data: result.data ? {
-        stakeAmount: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[0],
-        stakeReward: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[1],
-        lastStakeTime: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[2],
-        lastUnstakeTime: (result.data as unknown as readonly [bigint, bigint, bigint, bigint])[3],
-      } as ContractStakeInfo : undefined
+    // Enhanced transformation with Chef contract specific status handling
+    const isNoDataError = result.error?.message?.includes('returned no data')
+    const isEmpty = !result.data || (
+      result.data &&
+      (result.data as ContractStakeInfo).stakeAmount === 0n &&
+      (result.data as ContractStakeInfo).stakeReward === 0n &&
+      (result.data as ContractStakeInfo).lastStakeTime === 0n &&
+      (result.data as ContractStakeInfo).lastUnstakeTime === 0n
+    )
+
+    const status: ChefContractDataStatus = result.isLoading 
+      ? ChefContractDataStatus.LOADING
+      : isNoDataError
+      ? ChefContractDataStatus.NO_DATA
+      : result.error 
+      ? ChefContractDataStatus.ERROR
+      : ChefContractDataStatus.SUCCESS
+
+    const stakeInfo: ContractStakeInfo = result.data ? {
+      stakeAmount: (result.data as ContractStakeInfo).stakeAmount || 0n,
+      stakeReward: (result.data as ContractStakeInfo).stakeReward || 0n,
+      lastStakeTime: (result.data as ContractStakeInfo).lastStakeTime || 0n,
+      lastUnstakeTime: (result.data as ContractStakeInfo).lastUnstakeTime || 0n,
+    } : {
+      stakeAmount: 0n,
+      stakeReward: 0n,
+      lastStakeTime: 0n,
+      lastUnstakeTime: 0n,
     }
 
-    return transformedResult
+    const chefQueryResult: ChefContractQueryResult<ContractStakeInfo> = {
+      data: stakeInfo,
+      status,
+      error: result.error || null,
+      isLoading: Boolean(result.isLoading),
+      isEmpty: Boolean(isEmpty || isNoDataError)
+    }
+
+    return chefQueryResult
   }
 
   // 获取实时奖励
@@ -255,15 +419,26 @@ export function useChefReadContract() {
       args: [staker],
       query: {
         enabled: !!staker && !!contractAddress,
+        retry: (failureCount, error) => {
+          // Don't retry if it's a "no data" error (user has no stake)
+          if (error?.message?.includes('returned no data')) {
+            return false
+          }
+          return failureCount < 3
+        }
       }
     })
 
     useEffect(() => {
       if (result.error && staker && contractAddress) {
-        console.error('❌ Failed to fetch rewards for:', staker)
-        console.error('Contract Address:', contractAddress)
-        console.error('Environment Variable:', process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS)
-        console.error('Error Details:', result.error)
+        if (result.error.message?.includes('returned no data')) {
+          console.log(`💰 No rewards found for ${staker} - user has not staked yet`)
+        } else {
+          console.error('❌ Failed to fetch rewards for:', staker)
+          console.error('Contract Address:', contractAddress)
+          console.error('Environment Variable:', process.env.NEXT_PUBLIC_BASE_SEPOLIA_CHEF_ADDRESS)
+          console.error('Error Details:', result.error)
+        }
       }
     }, [result.error, staker, contractAddress])
 
@@ -279,13 +454,23 @@ export function useChefReadContract() {
       args: [staker],
       query: {
         enabled: !!staker,
+        retry: (failureCount, error) => {
+          // Don't retry if it's a "no data" error or revert (user has no unstake)
+          if (error?.message?.includes('returned no data') || error?.message?.includes('reverted')) {
+            return false
+          }
+          return failureCount < 3
+        }
       }
     })
 
     useEffect(() => {
       if (result.error && staker) {
-        // 这个函数在没有unstake时会revert，这是正常的
-        console.log('No unstake in progress (expected for active stakes)')
+        if (result.error.message?.includes('returned no data') || result.error.message?.includes('reverted')) {
+          console.log(`⏳ No unstake lock time for ${staker} - user has not initiated unstake`)
+        } else {
+          console.error('Failed to fetch unstake lock time:', result.error)
+        }
       }
     }, [result.error, staker])
 
@@ -319,12 +504,12 @@ export function useChefReadContract() {
       console.warn('⚠️ Contract address is not set')
       return false
     }
-    
+
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 Verifying Chef contract at:', contractAddress)
       console.log('Expected functions: getTotalStakedAmount, getUserReward, getUserStakeInfo')
     }
-    
+
     return true
   }
 
@@ -366,6 +551,7 @@ export function useChefWriteContract() {
     try {
       toast.loading('Initiating reward transfer...', { id: 'send-reward-tx' })
 
+      // According to ABI: sendReward(uint32 _domainId, bytes _message, bytes _attestation)
       const result = await writeContract({
         address: contractAddress,
         abi: CHEF_ABI,
@@ -376,10 +562,11 @@ export function useChefWriteContract() {
 
       toast.success('Reward transfer initiated successfully!', { id: 'send-reward-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Reward transfer failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Reward transfer failed'
       toast.error(errorMessage, { id: 'send-reward-tx' })
-      throw error
+      throw contractError
     }
   }
 
@@ -445,10 +632,11 @@ export function useOFTContract(chainId: number) {
 
       toast.success('Token approval submitted successfully!', { id: 'approve-tx' })
       return result
-    } catch (error: any) {
-      const errorMessage = error.message || 'Token approval failed'
+    } catch (error: unknown) {
+      const contractError = error as ContractError
+      const errorMessage = contractError?.message || 'Token approval failed'
       toast.error(errorMessage, { id: 'approve-tx' })
-      throw error
+      throw contractError
     }
   }
 
@@ -473,8 +661,8 @@ export function useOFTContract(chainId: number) {
     return result
   }
 
-  // 获取token allowance
-  const getTokenAllowance = (owner: Address, spender: Address) => {
+  // 获取token allowance - 修复为Hook
+  const useTokenAllowance = (owner: Address, spender: Address) => {
     const result = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
       abi: contractABI,
@@ -488,8 +676,8 @@ export function useOFTContract(chainId: number) {
     return result
   }
 
-  // 获取token信息 - 修复类型问题
-  const getTokenInfo = () => {
+  // 获取token信息 - 修复为Hook
+  const useTokenInfo = () => {
     const name = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
       abi: contractABI,
@@ -519,7 +707,7 @@ export function useOFTContract(chainId: number) {
 
     // 只有OFT合约才有sharedDecimals，原生ERC20没有
     const isOFTContract = chainId === SUPPORTED_CHAINS.ARBITRUM_SEPOLIA.id || chainId === SUPPORTED_CHAINS.BASE_SEPOLIA.id
-    
+
     const sharedDecimals = useReadContract({
       address: (contractAddress ?? undefined) as `0x${string}` | undefined,
       abi: contractABI,
@@ -543,8 +731,8 @@ export function useOFTContract(chainId: number) {
     address: contractAddress,
     approve,
     getTokenBalance,
-    getTokenAllowance,
-    getTokenInfo,
+    useTokenAllowance,
+    useTokenInfo,
   }
 }
 

@@ -6,8 +6,8 @@ import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { AlertTriangle, Clock, TrendingUp, Zap, RotateCcw } from 'lucide-react'
-import { StakingStatus } from '@/types'
+import { AlertTriangle, Clock, TrendingUp, Zap, RotateCcw, Database, Info } from 'lucide-react'
+import { StakingStatus, ChefContractDataStatus } from '@/types'
 import { formatUSDCAmount } from '@/lib/utils'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
 
@@ -35,6 +35,37 @@ function getTokenInfo(chainId: number) {
         name: 'Unknown Token',
         symbol: 'TOKEN',
         description: 'Unknown token'
+    }
+}
+
+// Chef合约状态指示器
+function getChefContractStatusBadge(status: ChefContractDataStatus) {
+    switch (status) {
+        case ChefContractDataStatus.SUCCESS:
+            return <Badge variant="success" className="gap-1"><Database className="w-3 h-3" />Active</Badge>
+        case ChefContractDataStatus.NO_DATA:
+            return <Badge variant="secondary" className="gap-1"><Info className="w-3 h-3" />New User</Badge>
+        case ChefContractDataStatus.LOADING:
+            return <Badge variant="outline" className="gap-1"><Clock className="w-3 h-3" />Loading</Badge>
+        case ChefContractDataStatus.ERROR:
+            return <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" />Error</Badge>
+        default:
+            return <Badge variant="muted">Unknown</Badge>
+    }
+}
+
+function getChefContractStatusDescription(status: ChefContractDataStatus, isFirstTimeUser: boolean) {
+    switch (status) {
+        case ChefContractDataStatus.SUCCESS:
+            return "Chef contract data loaded successfully"
+        case ChefContractDataStatus.NO_DATA:
+            return isFirstTimeUser ? "Welcome! No staking history found - ready to start staking" : "No active staking position"
+        case ChefContractDataStatus.LOADING:
+            return "Loading data from Chef contract on Base Sepolia..."
+        case ChefContractDataStatus.ERROR:
+            return "Unable to connect to Chef contract - please check network connection"
+        default:
+            return "Unknown contract status"
     }
 }
 
@@ -83,14 +114,41 @@ export function StakingDashboard() {
 
     if (stakingStatus.status === StakingStatus.NOT_STAKED) {
         return (
-            <Card>
-                <CardContent className="text-center py-8">
-                    <p className="text-gray-500 mb-4">No active staking position found</p>
-                    <p className="text-sm text-muted-foreground">
-                        Start staking to earn USDC rewards automatically!
-                    </p>
-                </CardContent>
-            </Card>
+            <div className="space-y-4">
+                {/* Chef Contract Status for New Users */}
+                <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader className="pb-3">
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="text-lg">Chef Contract Status</CardTitle>
+                            {getChefContractStatusBadge(stakingStatus.chefContractData.queryStatus)}
+                        </div>
+                        <CardDescription>
+                            {getChefContractStatusDescription(
+                                stakingStatus.chefContractData.queryStatus, 
+                                stakingStatus.chefContractData.isFirstTimeUser
+                            )}
+                        </CardDescription>
+                    </CardHeader>
+                    {process.env.NODE_ENV === 'development' && (
+                        <CardContent className="pt-0">
+                            <div className="text-xs text-gray-500 space-y-1">
+                                <p>🏠 Contract: {stakingStatus.chefContractData.contractAddress}</p>
+                                <p>🕐 Last Query: {stakingStatus.chefContractData.lastQueryTime?.toLocaleString()}</p>
+                                <p>👤 First Time User: {stakingStatus.chefContractData.isFirstTimeUser ? 'Yes' : 'No'}</p>
+                            </div>
+                        </CardContent>
+                    )}
+                </Card>
+
+                <Card>
+                    <CardContent className="text-center py-8">
+                        <p className="text-gray-500 mb-4">No active staking position found</p>
+                        <p className="text-sm text-muted-foreground">
+                            Start staking to earn USDC rewards automatically!
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
         )
     }
 
@@ -123,7 +181,13 @@ export function StakingDashboard() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold">My Staking Position</h2>
+                <div>
+                    <h2 className="text-2xl font-bold">My Staking Position</h2>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-gray-500">Chef Contract:</span>
+                        {getChefContractStatusBadge(stakingStatus.chefContractData.queryStatus)}
+                    </div>
+                </div>
                 {getStatusBadge(stakingStatus.status)}
             </div>
 
@@ -293,6 +357,52 @@ export function StakingDashboard() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Chef Contract Debug Information (Development Only) */}
+            {process.env.NODE_ENV === 'development' && (
+                <Card className="border-l-4 border-l-gray-300">
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            <Database className="w-5 h-5" />
+                            Chef Contract Debug Info
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <p className="font-medium text-gray-700">Contract Status</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    {getChefContractStatusBadge(stakingStatus.chefContractData.queryStatus)}
+                                    <span className="text-gray-600">
+                                        {getChefContractStatusDescription(
+                                            stakingStatus.chefContractData.queryStatus,
+                                            stakingStatus.chefContractData.isFirstTimeUser
+                                        )}
+                                    </span>
+                                </div>
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-700">Contract Address</p>
+                                <p className="text-gray-600 font-mono text-xs mt-1">
+                                    {stakingStatus.chefContractData.contractAddress}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-700">Query Status</p>
+                                <p className="text-gray-600 mt-1">
+                                    Valid Data: {stakingStatus.chefContractData.hasValidStakeData ? '✅' : '❌'}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="font-medium text-gray-700">Last Query</p>
+                                <p className="text-gray-600 mt-1">
+                                    {stakingStatus.chefContractData.lastQueryTime?.toLocaleString() || 'Never'}
+                                </p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* 质押时间信息 */}
             {stakingStatus.lastStakeTime && (

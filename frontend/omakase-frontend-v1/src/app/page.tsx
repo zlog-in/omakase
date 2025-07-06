@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Zap, Shield, Clock, DollarSign, RotateCcw } from 'lucide-react'
 import { StakingStatus } from '@/types'
-import { SUPPORTED_CHAINS } from '@/lib/constants'
+import { SUPPORTED_CHAINS, STAKING_CONSTANTS } from '@/lib/constants'
 
 // 代币信息映射
 const TOKEN_INFO = {
@@ -430,16 +430,89 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               <div>
                 <p className="font-medium text-gray-600">Ethereum Sepolia</p>
-                <p className="font-mono text-gray-500">OMAKASE: 0x2dA9...5b2D</p>
-                <p className="font-mono text-gray-500">Adapter: 0x5132...694</p>
+                <p className="font-mono text-gray-500">
+                  🪙 Native ERC20: 
+                  <a 
+                    href="https://sepolia.etherscan.io/address/0x2dA943A5E008b9A85aA0E80F0d7d8d53a4945b2D"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0x2dA9...5b2D
+                  </a>
+                </p>
+                <p className="font-mono text-gray-500">
+                  🔗 Adapter: 
+                  <a 
+                    href="https://sepolia.etherscan.io/address/0x5132f64f01140C4EfCdEbfcFe769c69E023cd694"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0x5132...694
+                  </a>
+                </p>
+                <p className="font-mono text-gray-500">
+                  ⏳ Waiter: 
+                  <a 
+                    href="https://sepolia.etherscan.io/address/0xCccBc8e303E254c854bC132A5c9e4d477b6288c8"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0xCccB...88c8
+                  </a>
+                </p>
               </div>
               <div>
                 <p className="font-medium text-gray-600">Arbitrum Sepolia</p>
-                <p className="font-mono text-gray-500">OFT: 0x3b6B...065</p>
+                <p className="font-mono text-gray-500">
+                  🪙 OFT: 
+                  <a 
+                    href="https://sepolia.arbiscan.io/address/0x3b6Be820c586B7235e19c7956e9408879A0F6065"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0x3b6B...065
+                  </a>
+                </p>
+                <p className="font-mono text-gray-500">
+                  ⏳ Waiter: 
+                  <a 
+                    href="https://sepolia.arbiscan.io/address/0xCccBc8e303E254c854bC132A5c9e4d477b6288c8"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0xCccB...88c8
+                  </a>
+                </p>
               </div>
               <div>
                 <p className="font-medium text-gray-600">Base Sepolia (Hub)</p>
-                <p className="font-mono text-gray-500">OFT: 0x3b6B...065</p>
+                <p className="font-mono text-gray-500">
+                  🪙 OFT: 
+                  <a 
+                    href="https://sepolia.basescan.org/address/0x3b6Be820c586B7235e19c7956e9408879A0F6065"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0x3b6B...065
+                  </a>
+                </p>
+                <p className="font-mono text-gray-500">
+                  👨‍🍳 Chef: 
+                  <a 
+                    href="https://sepolia.basescan.org/address/0xcaa8340AA4a760cF83D9e712597AD045fA1b3C50"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-1 text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    0xcaa8...3C50
+                  </a>
+                </p>
               </div>
             </div>
           </div>

@@ -332,33 +332,67 @@ export function StakeForm() {
             </div>
           )}
 
-          {/* 质押按钮 */}
-          <Button
-            onClick={handleStake}
-            disabled={
-              isLoading ||
-              !address ||
-              !amount ||
-              !canStake(amount) ||
-              Object.keys(errors).length > 0
-            }
-            className="w-full"
-            size="lg"
-          >
-            {isLoading ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Staking...
+          {/* 增强的质押按钮 */}
+          <div className="space-y-2">
+            <Button
+              onClick={handleStake}
+              disabled={
+                isLoading ||
+                !address ||
+                !amount ||
+                !canStake(amount) ||
+                Object.keys(errors).length > 0
+              }
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+              size="lg"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Stake...</span>
+                </div>
+              ) : warnings.unstakeCancel ? (
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5" />
+                  <span>🔄 Restart Staking Cycle</span>
+                </div>
+              ) : amount && isValidAmount(amount) ? (
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  <span>Stake {amount} {tokenInfo.symbol} & Start Earning!</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  <span>Stake {tokenInfo.symbol} Tokens</span>
+                </div>
+              )}
+            </Button>
+            
+            {/* 快速质押按钮 */}
+            {!amount && balance !== '0' && parseFloat(balance) > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  onClick={() => handleQuickAmount(25)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  disabled={isLoading || !address}
+                >
+                  🚀 Quick Stake 25%
+                </Button>
+                <Button
+                  onClick={() => handleQuickAmount(50)}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  disabled={isLoading || !address}
+                >
+                  ⚡ Quick Stake 50%
+                </Button>
               </div>
-            ) : warnings.unstakeCancel ? (
-              <div className="flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Restart Staking Cycle
-              </div>
-            ) : (
-              `Stake ${tokenInfo.symbol}`
             )}
-          </Button>
+          </div>
 
           {!address && (
             <p className="text-sm text-red-600 text-center flex items-center justify-center gap-1">

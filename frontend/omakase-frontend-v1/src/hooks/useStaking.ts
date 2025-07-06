@@ -210,22 +210,20 @@ export function useStaking(): UseStakingReturn {
     refetchAllowance
   ])
 
-  // Unstake操作 - 使用自定义toast
+  // Unstake操作 - 允许随时unstake，没有时间限制
   const unstake = useCallback(async (): Promise<void> => {
     if (!waiterContract.address || !safeChainId || !safeUserStakeInfo) {
       throw new Error('Cannot unstake: invalid state')
     }
 
-    if (safeUserStakeInfo.lastUnstakeTime > 0n) {
-      customToast.error('You have already initiated an unstake request')
-      return
-    }
+    // 移除对已发起unstake请求的检查，允许随时unstake
+    // 用户可以随时发起新的unstake请求
 
     setIsLoading(true)
     try {
       await waiterContract.unstake()
 
-      customToast.staking.unstakeSuccess(STAKING_CONSTANTS.UNSTAKE_PERIOD)
+      customToast.staking.unstakeSuccess('Unstake request initiated successfully! You can withdraw anytime.')
 
       // 刷新数据
       console.log('🔄 Refreshing staking data after unstake operation...')
@@ -394,15 +392,9 @@ export function useStaking(): UseStakingReturn {
     let unstakeLockRemaining = 0
 
     if (hasUnstaked && lastUnstakeTime) {
-      const unstakeTimestamp = Number(safeUserStakeInfo.lastUnstakeTime)
-      const unlockTimestamp = unstakeTimestamp + STAKING_CONSTANTS.UNSTAKE_PERIOD
-      unstakeUnlockTime = new Date(unlockTimestamp * 1000)
-
-      if (typeof unstakeLockTime === 'bigint') {
-        unstakeLockRemaining = Number(unstakeLockTime)
-      } else {
-        unstakeLockRemaining = Math.max(0, unlockTimestamp - now)
-      }
+      // 移除解锁期间逻辑：用户发起unstake后可以立即withdraw
+      unstakeUnlockTime = lastUnstakeTime // 解锁时间就是unstake时间
+      unstakeLockRemaining = 0 // 没有剩余锁定时间
     }
 
     // 计算质押持续时间 - 类型安全
@@ -511,7 +503,8 @@ export function useStaking(): UseStakingReturn {
 
   const canUnstake = useCallback((): boolean => {
     if (!safeUserStakeInfo) return false
-    return safeUserStakeInfo.stakeAmount > 0n && safeUserStakeInfo.lastUnstakeTime === 0n
+    // 简化条件：只要有质押金额就可以unstake，没有时间限制
+    return safeUserStakeInfo.stakeAmount > 0n
   }, [safeUserStakeInfo])
 
   const canWithdrawCheck = useCallback((): boolean => {

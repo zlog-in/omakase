@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useStaking, useUnstakeCountdown, useRealtimeRewards } from '@/hooks/useStaking'
+import { useStaking, useRealtimeRewards } from '@/hooks/useStaking'
 import { useAccount, useChainId } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
@@ -102,7 +102,8 @@ export function StakingDashboard() {
 
     const stakingStatus = getStakingStatus()
     const rewardCalculation = getRewardCalculation()
-    const countdownText = useUnstakeCountdown(stakingStatus.unstakeUnlockTime)
+    // 移除倒计时功能，因为不再需要等待解锁期间
+    // const countdownText = useUnstakeCountdown(stakingStatus.unstakeUnlockTime)
     const realtimeRewards = useRealtimeRewards(
         stakingStatus.stakedAmountRaw > 0n ? {
             stakeAmount: stakingStatus.stakedAmountRaw,
@@ -170,7 +171,7 @@ export function StakingDashboard() {
             case StakingStatus.ACTIVE:
                 return `Your ${tokenInfo.symbol} tokens are actively earning rewards`
             case StakingStatus.UNSTAKED:
-                return "Unstake initiated, waiting for lock period to end"
+                return "Unstake initiated - you can withdraw anytime"
             case StakingStatus.WITHDRAWN:
                 return "Tokens have been withdrawn"
             default:
@@ -243,22 +244,19 @@ export function StakingDashboard() {
 
                     {/* Unstake状态特殊显示 */}
                     {stakingStatus.status === StakingStatus.UNSTAKED && (
-                        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                             <div className="flex items-start gap-3">
-                                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                                <AlertTriangle className="w-5 h-5 text-green-600 mt-0.5" />
                                 <div className="flex-1">
-                                    <h4 className="font-medium text-yellow-800">Unstake Lock Period</h4>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                        {stakingStatus.canWithdraw
-                                            ? "✅ Lock period ended - You can now withdraw your tokens"
-                                            : `🕐 ${countdownText} remaining until you can withdraw`
-                                        }
+                                    <h4 className="font-medium text-green-800">Ready to Withdraw</h4>
+                                    <p className="text-sm text-green-700 mt-1">
+                                        ✅ Your unstake request has been processed. You can withdraw your tokens anytime or initiate another unstake request.
                                     </p>
                                     {stakingStatus.isUnstakeCancellable && (
                                         <div className="mt-3 p-3 bg-white rounded border">
                                             <p className="text-sm text-gray-700 mb-2">
-                                                💡 <strong>Tip:</strong> You can cancel this unstake by staking additional {tokenInfo.symbol} tokens.
-                                                This will reset your staking timer and you'll continue earning rewards.
+                                                💡 <strong>Tip:</strong> You can restart staking by adding more {tokenInfo.symbol} tokens.
+                                                This will cancel your unstake and resume earning rewards.
                                             </p>
                                             <Button
                                                 variant="outline"
@@ -268,7 +266,7 @@ export function StakingDashboard() {
                                                 className="gap-2"
                                             >
                                                 <RotateCcw className="w-4 h-4" />
-                                                Cancel Unstake
+                                                Restart Staking
                                             </Button>
                                         </div>
                                     )}
@@ -291,7 +289,7 @@ export function StakingDashboard() {
                             </Button>
                         )}
 
-                        {stakingStatus.status === StakingStatus.UNSTAKED && stakingStatus.canWithdraw && (
+                        {stakingStatus.status === StakingStatus.UNSTAKED && (
                             <Button
                                 onClick={() => withdraw()}
                                 disabled={isLoading || !canWithdraw()}
@@ -299,6 +297,18 @@ export function StakingDashboard() {
                             >
                                 <TrendingUp className="w-4 h-4" />
                                 Withdraw {tokenInfo.symbol}
+                            </Button>
+                        )}
+
+                        {stakingStatus.status === StakingStatus.UNSTAKED && (
+                            <Button
+                                variant="outline"
+                                onClick={() => unstake()}
+                                disabled={isLoading || !canUnstake()}
+                                className="gap-2"
+                            >
+                                <Clock className="w-4 h-4" />
+                                Unstake Again
                             </Button>
                         )}
 

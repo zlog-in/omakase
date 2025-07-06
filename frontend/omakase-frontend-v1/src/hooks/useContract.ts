@@ -2,6 +2,7 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi'
 import { readContract } from 'wagmi/actions'
 import { useEffect } from 'react'
 import { Address } from 'viem'
+import { baseSepolia } from 'viem/chains'
 import { WAITER_ABI, CHEF_ABI, OFT_ABI, NATIVE_ERC20_ABI } from '@/lib/contracts'
 import { SUPPORTED_CHAINS } from '@/lib/constants'
 import { wagmiConfig } from '@/lib/wagmi'
@@ -65,7 +66,7 @@ export function useWaiterContract(chainId: number) {
         if (typeof data === 'string') return BigInt(data)
         throw new Error('Failed to fetch LayerZero fee for stake')
       }
-      return data
+      return 10000000000000000n
     } catch (error) {
       console.error('Error in quoteStake:', error)
       throw new Error('Failed to fetch LayerZero fee for stake')
@@ -87,7 +88,7 @@ export function useWaiterContract(chainId: number) {
         if (typeof data === 'string') return BigInt(data)
         throw new Error('Failed to fetch LayerZero fee for unstake')
       }
-      return data
+      return 10000000000000000n
     } catch (error) {
       console.error('Error in quoteUnstake:', error)
       throw new Error('Failed to fetch LayerZero fee for unstake')
@@ -109,7 +110,7 @@ export function useWaiterContract(chainId: number) {
         if (typeof data === 'string') return BigInt(data)
         throw new Error('Failed to fetch LayerZero fee for withdraw')
       }
-      return data
+      return 10000000000000000n
     } catch (error) {
       console.error('Error in quoteWithdraw:', error)
       throw new Error('Failed to fetch LayerZero fee for withdraw')
@@ -131,7 +132,7 @@ export function useWaiterContract(chainId: number) {
         if (typeof data === 'string') return BigInt(data)
         throw new Error('Failed to fetch LayerZero fee for claim')
       }
-      return data
+      return 10000000000000000n
     } catch (error) {
       console.error('Error in quoteClaim:', error)
       throw new Error('Failed to fetch LayerZero fee for claim')
@@ -327,6 +328,7 @@ export function useChefReadContract() {
       address: contractAddress,
       abi: CHEF_ABI,
       functionName: 'getTotalStakedAmount',
+      chainId: baseSepolia.id,
     })
 
     // 移除渲染期间的toast调用
@@ -346,6 +348,7 @@ export function useChefReadContract() {
       abi: CHEF_ABI,
       functionName: 'getUserStakeInfo',
       args: [staker],
+      chainId: baseSepolia.id,
       query: {
         enabled: !!staker,
         retry: (failureCount, error) => {
@@ -417,6 +420,7 @@ export function useChefReadContract() {
       abi: CHEF_ABI,
       functionName: 'getUserReward',
       args: [staker],
+      chainId: baseSepolia.id,
       query: {
         enabled: !!staker && !!contractAddress,
         retry: (failureCount, error) => {
@@ -452,6 +456,7 @@ export function useChefReadContract() {
       abi: CHEF_ABI,
       functionName: 'getUserUnstakeLockTime',
       args: [staker],
+      chainId: baseSepolia.id,
       query: {
         enabled: !!staker,
         retry: (failureCount, error) => {
@@ -483,6 +488,7 @@ export function useChefReadContract() {
       address: contractAddress,
       abi: CHEF_ABI,
       functionName: 'UNSTAKE_PERIOD',
+      chainId: baseSepolia.id,
     })
 
     return result
@@ -493,6 +499,7 @@ export function useChefReadContract() {
       address: contractAddress,
       abi: CHEF_ABI,
       functionName: 'STAKE_REWARD_RATE',
+      chainId: baseSepolia.id,
     })
 
     return result
@@ -519,6 +526,7 @@ export function useChefReadContract() {
       address: contractAddress,
       abi: CHEF_ABI,
       functionName: 'totalStakedAmount',
+      chainId: baseSepolia.id,
     })
 
     useEffect(() => {
@@ -557,7 +565,7 @@ export function useChefWriteContract() {
         abi: CHEF_ABI,
         functionName: 'sendReward',
         args: [domainId, message as `0x${string}`, attestation as `0x${string}`],
-        chainId: 84532 as SupportedChainId,
+        chainId: baseSepolia.id as SupportedChainId,
       })
 
       toast.success('Reward transfer initiated successfully!', { id: 'send-reward-tx' })

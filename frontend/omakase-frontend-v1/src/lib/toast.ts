@@ -45,10 +45,10 @@ export const customToast = {
             })
         },
 
-        unstakeSuccess: (lockPeriod: number) => {
-            return toast.success(`Unstake successful! You can withdraw after ${lockPeriod} seconds lock period.`, {
-                icon: '🕐',
-                duration: 5000,
+        unstakeSuccess: (message: string = 'Unstake successful! You can withdraw anytime.') => {
+            return toast.success(message, {
+                icon: '✅',
+                duration: 4000,
             })
         },
 
@@ -96,7 +96,7 @@ export const customToast = {
             },
 
             unstaked: () => {
-                return toast('Unstake initiated. You can withdraw after the lock period.', {
+                return toast('Unstake initiated. You can withdraw anytime.', {
                     icon: 'ℹ️',
                     style: {
                         background: '#3b82f6',

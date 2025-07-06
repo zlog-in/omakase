@@ -86,8 +86,8 @@ export interface UserStakingPosition {
   // 时间信息
   lastStakeTime: Date | null
   lastUnstakeTime: Date | null
-  unstakeUnlockTime: Date | null  // 可以withdraw的时间
-  unstakeLockRemaining: number    // 剩余锁定时间（秒）
+  unstakeUnlockTime: Date | null  // unstake时间（立即可withdraw）
+  unstakeLockRemaining: number    // 剩余锁定时间（总是0，无锁定期间）
 
   // 计算字段
   stakingDuration: number         // 质押持续时间（秒）
@@ -116,7 +116,7 @@ export interface GlobalStats {
   totalUsers: number
   averageStakeAmount: string
   stakingAPR: number           // 年化收益率
-  unstakePeriod: number        // unstake锁定期（秒）
+  unstakePeriod: number        // unstake锁定期（已移除，值为0）
   rewardRate: number           // 奖励率（BP per second）
 }
 

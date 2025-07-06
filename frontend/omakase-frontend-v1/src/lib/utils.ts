@@ -168,7 +168,7 @@ export function calculateCurrentReward(stakeInfo: ContractStakeInfo, oftSharedDe
 }
 
 /**
- * 获取质押状态
+ * 获取质押状态 - 简化逻辑，移除时间依赖
  */
 export function getStakingStatus(stakeInfo: ContractStakeInfo): StakingStatus {
     const hasStaked = stakeInfo.stakeAmount > 0n
@@ -179,11 +179,8 @@ export function getStakingStatus(stakeInfo: ContractStakeInfo): StakingStatus {
     }
 
     if (hasUnstaked) {
-        const now = Math.floor(Date.now() / 1000)
-        const unstakeTime = Number(stakeInfo.lastUnstakeTime)
-        const canWithdraw = (now - unstakeTime) >= STAKING_CONSTANTS.UNSTAKE_PERIOD
-
-        return canWithdraw ? StakingStatus.UNSTAKED : StakingStatus.UNSTAKED
+        // 简化逻辑：一旦发起unstake就是UNSTAKED状态，可以立即withdraw
+        return StakingStatus.UNSTAKED
     }
 
     return StakingStatus.ACTIVE
@@ -198,15 +195,11 @@ export function canCancelUnstake(stakeInfo: ContractStakeInfo): boolean {
 }
 
 /**
- * 检查是否可以withdraw
+ * 检查是否可以withdraw - 移除时间限制，只要发起过unstake就可以withdraw
  */
 export function canWithdraw(stakeInfo: ContractStakeInfo): boolean {
-    if (stakeInfo.lastUnstakeTime === 0n) return false
-
-    const now = Math.floor(Date.now() / 1000)
-    const unstakeTime = Number(stakeInfo.lastUnstakeTime)
-
-    return (now - unstakeTime) >= STAKING_CONSTANTS.UNSTAKE_PERIOD
+    // 简化逻辑：只要发起过unstake请求就可以立即withdraw
+    return stakeInfo.lastUnstakeTime > 0n
 }
 
 /**

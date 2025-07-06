@@ -92,7 +92,11 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
     function _getUserReward(address _staker) internal view returns (uint256) {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
         return stakeInfo.stakeReward
-            + stakeInfo.lastUnstakeTime != 0 ? stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime) : 0
-                / (10 ** IOFT(oft).sharedDecimals());
+            + (
+                stakeInfo.lastUnstakeTime != 0
+                    ? stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
+                        / (10 ** IOFT(oft).sharedDecimals())
+                    : 0
+            );
     }
 }

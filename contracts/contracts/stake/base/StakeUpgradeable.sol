@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+    // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 import {CCTPHandlerUpgradeable} from "./CCTPHandlerUpgradeable.sol";
@@ -92,7 +92,7 @@ abstract contract StakeUpgradeable is CCTPHandlerUpgradeable {
     function _getUserReward(address _staker) internal view returns (uint256) {
         StakeInfo storage stakeInfo = userStakeInfo[_staker];
         return stakeInfo.stakeReward
-            + stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime)
+            + stakeInfo.lastUnstakeTime != 0 ? stakeInfo.stakeAmount * STAKE_REWARD_RATE * (block.timestamp - stakeInfo.lastStakeTime) : 0
                 / (10 ** IOFT(oft).sharedDecimals());
     }
 }

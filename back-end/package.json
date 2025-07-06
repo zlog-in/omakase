@@ -1,0 +1,31 @@
+{
+  "name": "omakase-backend",
+  "version": "1.0.0",
+  "description": "Backend for Omakase project",
+  "main": "src/monitor.js",
+  "scripts": {
+    "start": "node src/monitor.js",
+    "dev": "nodemon src/monitor.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nodejs",
+    "backend",
+    "omakase"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.10.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.8.1",
+    "viem": "^2.31.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
